@@ -1,0 +1,3 @@
+<launch>
+	<node pkg="turtlebot3_dqn" type="autorace_Double_DQN_CNN" name="Autorace_cnn_test" output="screen" />
+</launch>

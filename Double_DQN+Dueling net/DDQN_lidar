@@ -1,0 +1,293 @@
+#!/usr/bin/env python
+import rospy
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+from std_msgs.msg import Float32MultiArray
+from src.turtlebot3_dqn.environment_stage_4 import Env
+import time
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.nn.utils import clip_grad_norm_
+import numpy as np
+import pickle
+
+class ReplayBuffer():
+
+	def  __init__(self, obs_dim, memory_size, batch_size = 32):
+
+        	self.obs_buf = np.zeros([memory_size, obs_dim], dtype = np.float32)
+        	self.next_obs_buf = np.zeros([memory_size, obs_dim], dtype = np.float32)
+        	self.act_buf = np.zeros([memory_size], dtype = np.float32)
+        	self.rew_buf = np.zeros([memory_size], dtype = np.float32)
+        	self.done_buf = np.zeros(memory_size, dtype = np.float32)
+        
+        	self.max_size, self.batch_size = memory_size, batch_size
+        	self.ptr, self.size,  = 0, 0 
+
+
+	def store(self, obs, 
+                    	act,
+                    	rew,
+                    	next_obs,
+                    	done):
+        
+        	self.obs_buf[self.ptr] = obs
+        	self.next_obs_buf[self.ptr] = next_obs
+        	self.act_buf[self.ptr] = act
+        	self.rew_buf[self.ptr] = rew
+        	self.done_buf[self.ptr] = done
+        
+        	self.ptr = (self.ptr + 1) % self.max_size   
+        	self.size = min(self.size + 1, self.max_size) 
+   
+
+	def sample_batch(self):
+        
+		idxs = np.random.choice(self.size , self.batch_size , replace = False)
+        
+		return dict(obs = self.obs_buf[idxs],
+                    	    act = self.act_buf[idxs],
+                    	    rew = self.rew_buf[idxs],
+                    	    next_obs = self.next_obs_buf[idxs],
+                    	    done = self.done_buf[idxs])
+
+	def __len__(self):
+        
+		return self.size
+
+
+class Network(nn.Module):
+
+	def __init__(self, in_dim, hidden_size, out_dim):
+		super(Network,self).__init__()
+
+        	self.feature_layer = nn.Sequential(
+            						nn.Linear(in_dim, hidden_size), 
+            						nn.ReLU(),
+        					   )
+        
+        
+        	self.advantage_layer = nn.Sequential(
+            						nn.Linear(hidden_size, hidden_size),
+            						nn.ReLU(),
+            						nn.Linear(hidden_size, out_dim),
+       						   )
+
+
+        	self.value_layer = nn.Sequential(
+            						nn.Linear(hidden_size, hidden_size),
+            						nn.ReLU(),
+            						nn.Linear(hidden_size, 1),
+        					)
+	
+	def forward(self, s):
+        	
+		feature = self.feature_layer(s)
+        
+        	value = self.value_layer(feature)
+        	advantage = self.advantage_layer(feature)
+
+        	Q = value + advantage - advantage.mean(dim=-1, keepdim=True)
+        
+        	return Q
+
+class DoubleDQNAgent(object):
+
+
+	def __init__(self,memory_size,
+                	  batch_size,
+                	  state_size = 28,
+                	  action_size = 5,
+			  hidden_size = 128,
+                	  epsilon_decay = 0.99,
+                	  min_epsilon  = 0.05,
+                	  update_time= 2000,
+                	  gamma = 0.99,
+                	  learning_rate  = 0.00025,
+                	  train_start = 128
+                	  ):
+		self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")	
+
+		self.pub_result = rospy.Publisher('result', Float32MultiArray, queue_size=5)
+        	self.dirPath = os.path.dirname(os.path.realpath(__file__))
+		self.dirPath = self.dirPath.replace('turtlebot3_dqn/nodes','turtlebot3_dqn/save_model/ROS_4/ROS_4_DDQN_')
+		self.result = Float32MultiArray()
+
+        	self.state_size = state_size
+        	self.action_size =  action_size
+		self.hidden_size = hidden_size
+
+		self.load_model = True
+		self.load_episode = 720
+
+        	self.batch_size = batch_size
+        	self.memory_size = memory_size
+
+		self.q_value = 0.
+
+        	self.eval_net = Network(self.state_size, self.hidden_size, self.action_size).to(self.device)
+        	self.target_net = Network(self.state_size, self.hidden_size, self.action_size).to(self.device)
+		self.target_net.load_state_dict(self.eval_net.state_dict())
+        	self.target_net.eval()
+
+        	self.update_time = update_time
+        	self.update_counter = 0 
+
+        	self.gamma = gamma
+        	self.lr = learning_rate
+
+        	self.epsilon = 1.0
+        	self.epsilon_decay = epsilon_decay
+        	self.min_epsilon = min_epsilon
+
+        	self.memory = ReplayBuffer(self.state_size, self.memory_size, self.batch_size)
+        	self.transition = list()
+
+        	self.train_start = train_start
+
+		self.optimizer = optim.Adam(self.eval_net.parameters(),lr=self.lr)
+		self.loss = nn.MSELoss()
+
+		if self.load_model :
+			self.eval_net.load_state_dict(torch.load(self.dirPath + str(self.load_episode) + '.pkl'))
+			with open(self.dirPath + str(self.load_episode) + '.h5') as outfile :
+				param = pickle.load(outfile)
+				self.epsilon = param.get('epsilon')
+
+
+	def choose_action(self, state):
+
+		if self.epsilon > np.random.random():
+            
+			choose_action = np.random.randint(0,self.action_size)
+		else :
+        
+			choose_action = self.eval_net(torch.FloatTensor(state).to(self.device)).argmax()
+			choose_action = choose_action.detach().cpu().numpy()
+        
+		self.transition = [state, choose_action]
+		
+		return choose_action
+
+        
+
+
+	def target_net_update(self):
+        
+		if self.update_counter % self.update_time == 0 :
+        
+			self.target_net.load_state_dict(self.eval_net.state_dict())
+        
+		self.update_counter += 1
+
+
+	def learn(self):
+
+        	self.target_net_update()
+        
+        	samples = self.memory.sample_batch()
+
+        	state = torch.FloatTensor(samples['obs']).to(self.device)
+        	next_state = torch.FloatTensor(samples['next_obs']).to(self.device)
+        	action = torch.LongTensor(samples['act']).reshape(-1,1).to(self.device)
+        	reward = torch.FloatTensor(samples['rew']).reshape(-1,1).to(self.device)
+        	done = torch.FloatTensor(samples['done']).reshape(-1,1).to(self.device)
+
+		curr_q = self.eval_net(state).gather(1, action)
+		self.q_value = curr_q.detach().cpu().numpy()
+		next_q = self.target_net(next_state).gather(1, self.eval_net(next_state).argmax(dim = 1, keepdim = True)).detach()
+
+		mask = 1 - done
+        
+		target_q = (reward + self.gamma * next_q * mask).to(self.device)
+
+		loss = self.loss(curr_q, target_q)
+
+		self.optimizer.zero_grad()
+		loss.backward()
+		clip_grad_norm_(self.eval_net.parameters(), 10.0)
+		self.optimizer.step()
+
+		
+
+
+if __name__ == "__main__":
+
+	ddqn = DoubleDQNAgent(1000000, 128)
+
+
+	rospy.init_node('DDQN_LiDAR')
+
+	pub_get_action = rospy.Publisher('get_action', Float32MultiArray, queue_size=5)
+
+	pub_result = rospy.Publisher('result',Float32MultiArray,queue_size=5)
+	
+
+	get_action = Float32MultiArray()
+
+	result = Float32MultiArray()
+	param_dictionary = dict()
+
+	env = Env(ddqn.action_size)
+
+	start_time = time.time()
+
+	for e in range(ddqn.load_episode, 1000000):
+
+
+		s = env.reset()
+	        done = False
+		score = 0
+
+		if e % 10 == 0 :
+		    torch.save(ddqn.eval_net.state_dict(), ddqn.dirPath + str(e) + '.pkl')
+		    with open(ddqn.dirPath + str(e) + '.h5' , 'w') as outfile:
+			pickle.dump(param_dictionary, outfile)
+
+		for t in range(6000):
+
+			a = ddqn.choose_action(s)
+
+			s_, r, done = env.step(a)
+
+	
+			ddqn.transition += [r, s_, done]
+
+			ddqn.memory.store(*ddqn.transition)
+        
+			if ddqn.memory.__len__() > ddqn.train_start:
+				ddqn.learn()
+			
+			score += r
+			s = s_
+	
+			get_action.data = [a, score, r]
+			pub_get_action.publish(get_action)
+
+			if t >= 500 :
+				rospy.loginfo("Time out!!!!!!")
+				done = True
+            
+			if done:	
+				result.data = [score, np.max(ddqn.q_value)]
+				pub_result.publish(result)
+
+				m, s = divmod(int(time.time() - start_time), 60)
+				h, m = divmod(m, 60)
+
+				param_keys = ['epsilon']
+				param_value = [ddqn.epsilon]
+				param_dictionary = dict(zip(param_keys, param_value))
+
+				rospy.loginfo('Ep: %d score: %.2f memory: %d epsilon: %.2f time: %d:%02d:%02d',e, score, ddqn.memory.__len__(), ddqn.epsilon, h, m, s)
+				
+				break
+
+		if ddqn.epsilon > ddqn.min_epsilon:
+		    
+			ddqn.epsilon *= ddqn.epsilon_decay
+
+

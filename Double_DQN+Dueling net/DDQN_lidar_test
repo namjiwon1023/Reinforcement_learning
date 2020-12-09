@@ -1,0 +1,116 @@
+#!/usr/bin/env python
+import rospy
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+from std_msgs.msg import Float32MultiArray
+from src.turtlebot3_dqn.environment_stage_4 import Env
+import time
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.nn.utils import clip_grad_norm_
+import numpy as np
+import pickle
+
+class Network(nn.Module):
+
+	def __init__(self, in_dim, hidden_size, out_dim):
+		super(Network,self).__init__()
+
+        	self.feature_layer = nn.Sequential(
+            						nn.Linear(in_dim, hidden_size), 
+            						nn.ReLU(),
+        					   )
+        
+        
+        	self.advantage_layer = nn.Sequential(
+            						nn.Linear(hidden_size, hidden_size),
+            						nn.ReLU(),
+            						nn.Linear(hidden_size, out_dim),
+       						   )
+
+
+        	self.value_layer = nn.Sequential(
+            						nn.Linear(hidden_size, hidden_size),
+            						nn.ReLU(),
+            						nn.Linear(hidden_size, 1),
+        					)
+	
+	def forward(self, s):
+        	
+		feature = self.feature_layer(s)
+        
+        	value = self.value_layer(feature)
+        	advantage = self.advantage_layer(feature)
+
+        	Q = value + advantage - advantage.mean(dim=-1, keepdim=True)
+        
+        	return Q
+
+class DoubleDQNAgent(object):
+
+
+	def __init__(self, state_size = 28,
+                	   action_size = 5,
+			   hidden_size = 128,
+                	  ):
+		self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")	
+        	self.dirPath = os.path.dirname(os.path.realpath(__file__))
+		self.dirPath = self.dirPath.replace('turtlebot3_dqn/nodes','turtlebot3_dqn/save_model/ROS_4/ROS_4_DDQN_')
+
+        	self.state_size = state_size
+        	self.action_size =  action_size
+		self.hidden_size = hidden_size
+
+        	self.eval_net = Network(self.state_size, self.hidden_size, self.action_size).to(self.device)
+        	self.target_net = Network(self.state_size, self.hidden_size, self.action_size).to(self.device)
+		self.target_net.load_state_dict(self.eval_net.state_dict())
+        	self.target_net.eval()
+
+		self.is_test = True
+
+		if self.is_test :
+			self.eval_net.load_state_dict(torch.load(self.dirPath + str(1100) + '.pkl'))
+			
+	def choose_action(self, state):
+        
+		choose_action = self.eval_net(torch.FloatTensor(state).to(self.device)).argmax()
+		choose_action = choose_action.detach().cpu().numpy()
+		
+		return choose_action	
+
+if __name__ == "__main__":
+
+	ddqn = DoubleDQNAgent()
+
+	rospy.init_node('DDQN_LiDAR')
+
+	env = Env(ddqn.action_size)
+
+	while True:
+
+		s = env.reset()
+	        done = False
+		score = 0
+
+		for t in range(6000):
+
+			a = ddqn.choose_action(s)
+
+			s_, r, done = env.step(a)
+			
+			score += r
+			s = s_
+
+			if t >= 500 :
+				rospy.loginfo("Time out!!!!!!")
+				done = True
+            
+			if done:	
+
+				rospy.loginfo(' score: %.2f ', score)
+				
+				break
+

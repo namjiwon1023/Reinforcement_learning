@@ -1,0 +1,159 @@
+#!/usr/bin/env python
+import rospy
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+from std_msgs.msg import Float32MultiArray
+from src.turtlebot3_dqn.environment_stage_1 import Env
+import time
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+import numpy as np
+
+
+class NET(nn.Module):
+    def __init__(self,state_size,hidden_size,action_size):
+        super(NET, self).__init__()
+        self.linear1 = nn.Linear(state_size,hidden_size)
+        self.linear1.weight.data.normal_(0,0.1)
+        self.linear2 = nn.Linear(hidden_size,hidden_size)
+        self.linear2.weight.data.normal_(0,0.1)
+        self.out = nn.Linear(hidden_size,action_size)
+        self.out.weight.data.normal_(0,0.1)
+
+    def forward(self,s):
+        x = F.relu(self.linear1(s))
+        x = F.relu(self.linear2(x))
+        x = F.dropout(x,p=0.5)
+        action_value = self.out(x)
+        return action_value
+
+class Agent(object):
+	def __init__(self,
+                 learning_rate=0.001,
+                 state_size=26,
+                 action_size=5,
+                 update_time=200,
+                 reward_decay = 0.9):
+
+	        self.state  = state_size
+        	self.action = action_size
+
+        	self.update_time = update_time
+	    	self.lr = learning_rate
+        	self.target_net = NET(self.state,256,self.action)
+        	self.eval_net = NET(self.state,256,self.action)
+
+        	self.train_start = 200
+
+        	self.memory_counter = 0
+        	self.memory_capacity = 2000000
+        	self.memory = np.zeros((self.memory_capacity,self.state * 2 + 2))
+
+        	self.update_step = 0
+
+        	self.batch_size = 32
+        	self.gamma = reward_decay
+        	self.epsilon = 0.9
+
+       		self.optim = optim.Adam(self.eval_net.parameters(),lr=self.lr)
+        	self.loss = nn.MSELoss()
+
+	def choose_action(self,x):
+	        x = torch.unsqueeze(torch.FloatTensor(x),0)
+	
+	        if np.random.uniform() < self.epsilon :
+	            action_value = self.eval_net.forward(x)
+	            action = torch.max(action_value,dim=1)[1].data.cpu().numpy()
+	            action = action[0]
+	
+	        else:
+	            action = np.random.randint(0,self.action)
+	
+	        return action
+	
+	def appendMemory(self, s, a, r, s_):
+
+	        append = np.hstack((s,[a,r],s_))
+
+	        index = self.memory_counter % self.memory_capacity
+	        self.memory[index,:] = append
+	        self.memory_counter += 1
+
+	def UpdateTargetNet(self):
+	        if self.update_step % self.update_time == 0 :
+	        	self.target_net.load_state_dict(self.eval_net.state_dict())
+        	self.update_step += 1
+
+	def learn(self):
+
+	        self.UpdateTargetNet()
+
+	        sample_index = np.random.choice(self.memory_capacity, self.batch_size)
+	        b_memory = self.memory[sample_index, :]
+	
+	        b_s = torch.FloatTensor(b_memory[:, :self.state])
+	        b_a = torch.LongTensor(b_memory[:, self.state: self.state + 1].astype(int))
+	        b_r = torch.FloatTensor(b_memory[:, self.state + 1:self.state + 2])
+	        b_s_ = torch.FloatTensor(b_memory[:, -self.state:])
+
+	        q_next = self.target_net(b_s_).detach()
+	        q_eval = self.eval_net(b_s).gather(1, b_a)
+	        q_target = b_r + self.gamma * q_next.max(1)[0].view(self.batch_size, 1)
+
+	        loss = self.loss(q_eval, q_target)
+	
+	        self.optim.zero_grad()
+	        loss.backward()
+	        self.optim.step()
+
+
+if __name__ == '__main__':
+	dqn = Agent()
+
+	rospy.init_node('turtlebot3_dqn_stage_1')
+	pub_get_action = rospy.Publisher('get_action', Float32MultiArray, queue_size=5)
+	get_action = Float32MultiArray()
+	env = Env(dqn.action)
+
+	scores, episodes = [], []
+	start_time = time.time()
+
+	for i_episode in range(3000):
+	        s = env.reset()
+	        ep_r = 0
+	        done = False
+	        score = 0
+	        for t in range(6000):
+	            a = dqn.choose_action(s)
+	            s_,r, done= env.step(a)
+	            dqn.appendMemory(s , a , r , s_ )
+	            score += r
+	            s= s_
+
+	            if dqn.memory_counter > dqn.train_start:
+	                dqn.learn()
+
+	            get_action.data = [a, score, r]
+	            pub_get_action.publish(get_action)
+	
+	            if t >= 500 :
+	                rospy.loginfo("Time out!!!!!!")
+	                done = True
+	
+	            if done:
+	                scores.append(score)
+	                episodes.append(i_episode)
+	                m, s = divmod(int(time.time() - start_time), 60)
+	                h, m = divmod(m, 60)
+	
+	                rospy.loginfo('Ep: %d score: %.2f memory: %d time: %d:%02d:%02d',
+	                              i_episode, score, dqn.memory_counter, h, m, s)
+	                break
+
+
+
+
+

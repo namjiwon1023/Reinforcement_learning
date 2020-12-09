@@ -1,0 +1,5 @@
+<launch>
+  <arg name="autorace" default="1"/>
+  <param name="autorace"  value="$(arg autorace)"/>
+  <node pkg="turtlebot3_dqn" type="autorace" name="autorace_test1" output="screen" />
+</launch>

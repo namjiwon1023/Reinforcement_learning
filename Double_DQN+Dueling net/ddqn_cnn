@@ -1,0 +1,242 @@
+#!/usr/bin/env python
+import rospy
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+from std_msgs.msg import Float32MultiArray
+from src.turtlebot3_dqn.autorace_cnn_env import Env
+import time
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+import numpy as np
+import pickle
+
+class ReplayBuffer():
+    def  __init__(self , obs_dim : int , size : int , batch_size : int = 32):
+
+        self.obs_buf = np.zeros( [size , obs_dim] , dtype = np.float32)
+        self.next_obs_buf = np.zeros( [size , obs_dim] , dtype = np.float32)
+        self.act_buf = np.zeros( [size] , dtype = np.float32)
+        self.rew_buf = np.zeros( [size] , dtype = np.float32)
+        self.done_buf = np.zeros( size , dtype = np.float32)
+        
+        self.max_size , self.batch_size, = size , batch_size
+        self.ptr , self.size  = 0  , 0 
+
+    def store(self, obs : np.ndarray , 
+                act : np.ndarray ,
+                rew : float ,
+                next_obs : np.ndarray,
+                done : bool):
+        
+        self.obs_buf[self.ptr] = obs
+        self.next_obs_buf[self.ptr] = next_obs
+        self.act_buf[self.ptr] = act
+        self.rew_buf[self.ptr] = rew
+        self.done_buf[self.ptr] = done
+        
+        self.ptr = (self.ptr + 1 ) % self.max_size   
+        self.size = min(self.size +1 , self.max_size)    
+
+    def sample_batch(self):
+        
+        idxs = np.random.choice(self.size , self.batch_size , replace = False)
+        
+        return dict(obs = self.obs_buf[idxs],
+                    act = self.act_buf[idxs],
+                    rew = self.rew_buf[idxs],
+                    next_obs = self.next_obs_buf[idxs],
+                    done = self.done_buf[idxs])
+
+    def __len__(self):
+        
+        return self.size
+
+class Network(nn.Module):
+    def __init__(self , in_dim : int , out_dim :int ):
+        super(self,Network).__init__()
+        
+        self.conv1 = nn.Conv2d(in_channels = in_dim,out_channels = 12,kernel_size = 5 , stride = 1 , padding = 2)
+        self.b1 = nn.BatchNorm2d(12)
+        self.pool = nn.MaxPool2d(2,2)
+        
+        self.conv2 = nn.Conv2d(16, 32, 5)
+        self.b2 = nn.BatchNorm2d(32)
+        
+        self.fc1 = nn.Linear(32 * 4 * 4, 256)
+        self.fc2 = nn.Linear(256, 64)
+        self.fc3 = nn.Linear(64, out_dim)
+        
+    def forward(self, s):
+        
+        x = self.pool(F.relu(self.b1((self.conv1(s)))))
+        x = self.pool(F.relu(self.b2(self.conv2(x))))
+        
+        x = x.view(-1, 32 * 4 * 4)
+        
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        
+        action_value  = self.fc3(x)
+        
+        return action_value 
+
+class DoubleDQNAgent(object):
+    def __init__(self,memory_size : int ,
+                batch_size : int ,
+                state_size : int = 1 ,
+                action_size : int = 3 , 
+                epsilon : float = 1.0,
+                epsilon_decay : float = 0.99,
+                min_epsilon : float = 0.1,
+                update_time : int = 200,
+                gamma : float = 0.9,
+                learning_rate : float = 0.00025,
+                train_start : int = 200
+                ):
+
+        self.pub_result = rospy.Publisher('result', Float32MultiArray, queue_size=5)
+        self.dirPath = os.path.dirname(os.path.realpath(__file__))
+	      self.dirPath = self.dirPath.replace('turtlebot3_dqn/nodes','turtlebot3_dqn/save_model/autorace_DDQN_')
+	      self.result = Float32MultiArray()
+
+        self.state_size = state_size
+        self.action_size =  action_size
+
+        self.batch_size = batch_size
+        self.memory_size = memory_size
+
+        self.eval_net = Network(self.state_size, self.action_size )
+        self.target_net = Network(self.state_size, self.action_size )
+
+        self.update_time = update_time
+        self.update_counter = 0 
+
+        self.gamma = gamma
+        self.lr = learning_rate
+
+        self.epsilon = epsilon
+        self.epsilon_decay = epsilon_decay
+        self.min_epsilon = min_epsilon
+
+        self.memory = ReplayBuffer( self.state_size ,self.memory_size , self.batch_size )
+        self.translate = list()
+
+        self.train_start = train_start
+
+        self.optimizer = optim.Adam(self.eval_net.parameters(),lr=self.lr)
+
+    def choose_action(self , state):
+
+        if self.epsilon > np.random.random():
+            
+            choose_action = np.random.choice(0,self.action_size)
+        
+        else :
+        
+            choose_action = self.eval_net(state).argmax()
+            choose_action = action.detach().numpy()
+        
+        self.transition = [state , choose_action]
+        
+        return choose_action
+
+    def target_net_update(self):
+        
+        if self.update_counter % self.update_time == 0 :
+        
+            self.target_net.load_state_dict(self.eval_net.state_dict())
+        
+        self.update_counter += 1
+
+    def learn(self):
+
+        self.target_net_update()
+        
+        samples = self.memory.sample_batch()
+
+        state = torch.TensoFloat(samples['obs'])
+        next_state = torch.TensorFloat(samples['next_obs'])
+        action = torch.TensorLong(samples['act']).reshape(-1,1)
+        reward = torch.TensorFloat(samples['rew']).reshape(-1,1)
+        done = torch.TensorFloat(samples['done']).reshape(-1,1)
+
+        curr_q = self.eval_net(state).gather(1,action)
+        next_q = self.target_net(next_state).gather(1 , self.eval_net(next_state).argmax(dim = 1 , keepdim = True)).detach()
+        
+        mask = 1 - done
+        
+        target_q = reward + self.gamma * next_q * mask 
+
+        loss = F.smooth_l1_loss(curr_q, target_q)
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+if __name__ == "__main__":
+
+    ddqn = DoubleDQNAgent(2000000,32)
+
+    rospy.init_node('autorace_cnn')
+    pub_get_action = rospy.Publisher('get_action', Float32MultiArray, queue_size=5)
+    pub_result = rospy.Publisher('result',Float32MultiArray,queue_size=5)
+    get_action = Float32MultiArray()
+    result = Float32MultiArray()
+
+    env = Env(ddqn.action_size)
+
+    scores, episodes = [], []
+    start_time = time.time()
+
+    for e in range(12000):
+
+        s = env.reset()
+        ep_r = 0
+        done = False
+	      score = 0
+
+        for t in range(6000):
+
+            a = ddqn.choose_action(s)
+            s_ ,r , done = env.step(a)
+
+            ddqn.transition += [r , s_ , done]
+            ddqn.memory.store(*ddqn.transition)
+            
+            score += r
+            s  = s_
+        
+            if ddqn.memory.size > ddqn.train_start:
+		            dqn.learn()
+
+            get_action.data = [a, score, r]
+	          pub_get_action.publish(get_action)
+
+            if t >= 500 :
+
+		            rospy.loginfo("Time out!!!!!!")
+		            done = True
+            
+            if done:	
+
+		            # result.data = [score,dqn.q_eval]
+		            result.data = [score]
+		            pub_result.publish(result)
+		            scores.append(score)
+		            episodes.append(e)
+
+		            m, s = divmod(int(time.time() - start_time), 60)
+		            h, m = divmod(m, 60)
+
+
+
+		            rospy.loginfo('Ep: %d score: %.2f memory: %d time: %d:%02d:%02d',e, score, ddqn.memory.size, h, m, s)
+				
+                break
+
+        if ddqn.epsilon > ddqn.min_epsilon:
+		    
+             ddqn.epsilon *= ddqn.epsilon_decay
