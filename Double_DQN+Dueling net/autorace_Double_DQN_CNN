@@ -13,7 +13,6 @@ import torch.optim as optim
 from torch.nn.utils import clip_grad_norm_
 import numpy as np
 import pickle
-import matplotlib.pyplot as plt
 
 class ReplayBuffer():
 
@@ -22,8 +21,9 @@ class ReplayBuffer():
 
 		self.image_size_w = 224
 		self.image_size_h = 224
-        	self.obs_buf = np.zeros([size, 3, self.image_size_h, self.image_size_w],dtype=np.float32)
-        	self.next_obs_buf = np.zeros([size , 3, self.image_size_h, self.image_size_w],dtype=np.float32)
+		self.channel = 4
+        	self.obs_buf = np.zeros([size, self.channel, self.image_size_h, self.image_size_w],dtype=np.float32)
+        	self.next_obs_buf = np.zeros([size , self.channel, self.image_size_h, self.image_size_w],dtype=np.float32)
         	self.act_buf = np.zeros([size],dtype = np.float32)
         	self.rew_buf = np.zeros([size],dtype = np.float32)
         	self.done_buf = np.zeros(size,dtype = np.float32)
@@ -64,10 +64,10 @@ class ReplayBuffer():
 
 
 class VGG16Net(nn.Module):
-	def __init__(self, out_dim):
+	def __init__(self, input_channel, out_dim):
 		super(VGG16Net,self).__init__()
 		self.features = nn.Sequential(
-				nn.Conv2d(3,64,kernel_size=3,padding=1),
+				nn.Conv2d(input_channel,64,kernel_size=3,padding=1),
 				nn.ReLU(inplace=True),
 
 				nn.Conv2d(64,64,kernel_size=3,padding=1),
@@ -152,13 +152,14 @@ class DoubleDQNAgent(object):
 
 	def __init__(self,memory_size,
                 	  batch_size,
-                	  action_size = 3, 
+                	  action_size = 5,
+	                  channel = 4, 
                 	  epsilon_decay = 0.99,
                 	  min_epsilon  = 0.05,
                 	  update_time= 2000,
                 	  gamma = 0.99,
                 	  learning_rate  = 0.00025,
-                	  train_start = 32
+                	  train_start = 16
                 	  ):
 
 		self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -170,6 +171,7 @@ class DoubleDQNAgent(object):
 		self.dirPath = self.dirPath.replace('turtlebot3_dqn/nodes','turtlebot3_dqn/save_model/DDQN_load_state/autorace_DDQN_')
 
         	self.action_size =  action_size
+		self.channel = channel
 
 		self.load_model = False
 		self.load_episode = 0
@@ -179,8 +181,8 @@ class DoubleDQNAgent(object):
 
 		self.q_value = 0.
 
-        	self.eval_net = VGG16Net(self.action_size).to(self.device)
-        	self.target_net = VGG16Net(self.action_size).to(self.device)
+        	self.eval_net = VGG16Net(self.channel, self.action_size).to(self.device)
+        	self.target_net = VGG16Net(self.channel, self.action_size).to(self.device)
 
 		self.target_net.load_state_dict(self.eval_net.state_dict())
         	self.target_net.eval()
@@ -268,7 +270,7 @@ class DoubleDQNAgent(object):
 
 if __name__ == "__main__":
 
-	ddqn = DoubleDQNAgent(1000, 8)
+	ddqn = DoubleDQNAgent(2000, 16)
 
 
 	rospy.init_node('Autorace_cnn_test')
@@ -289,8 +291,6 @@ if __name__ == "__main__":
 	start_time = time.time()
 
 	param_dictionary = dict()
-	
-	scores, episodes = [], []
 
 	for e in range(ddqn.load_episode, 1000000):
 
@@ -299,12 +299,13 @@ if __name__ == "__main__":
 	        done = False
 		score = 0
 
-		if e % 10 == 0 :
+		if e % 150 == 0 :
 		    torch.save(ddqn.eval_net.state_dict(), ddqn.dirPath + str(e) + '.pkl')
 		    with open(ddqn.dirPath + str(e) + '.h5' , 'w' ) as outfile:
 			pickle.dump(param_dictionary, outfile)
 
-		for t in range(6000):
+		# for t in range(6000):
+		while not done:
 
 			a = ddqn.choose_action(s)
 
@@ -324,16 +325,13 @@ if __name__ == "__main__":
 			get_action.data = [a, score, r]
 			pub_get_action.publish(get_action)
 
-			if t >= 500 :
-				rospy.loginfo("Time out!!!!!!")
-				done = True
+			# if t >= 500 :
+				# rospy.loginfo("Time out!!!!!!")
+				# done = True
             
 			if done:	
 				result.data = [score, np.max(ddqn.q_value)]
-				pub_result.publish(result)
-				
-				scores.append(score)
-                		episodes.append(e)				
+				pub_result.publish(result)				
 
 				m, s = divmod(int(time.time() - start_time), 60)
 				h, m = divmod(m, 60)
@@ -343,20 +341,9 @@ if __name__ == "__main__":
 				param_keys = ['epsilon']
 				param_value = [ddqn.epsilon]
 				param_dictionary = dict(zip(param_keys, param_value))
-				
-				plt.figure()
-				plt.plot(episodes,scores,color='red',label='score')
-
-				plt.xlabel('episode')
-				plt.ylabel('score')
-				plt.title('Return')				
-				
-				plt.show()
-
 				break
 
 		if ddqn.epsilon > ddqn.min_epsilon:
 		    
 			ddqn.epsilon *= ddqn.epsilon_decay
-
 
