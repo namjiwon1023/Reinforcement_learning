@@ -18,7 +18,6 @@ class Actor(nn.Module):
         self.brake = nn.Linear(600, 1)
         self.brake.weight.data.normal_(0,1e-4)
 
-
     def forward(self, state):
         x = F.relu(self.fc1(state))
         x = F.relu(self.fc2(x))

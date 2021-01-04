@@ -5,13 +5,14 @@ import random
 class OUNoise:
 
     def __init__(self,
-                size : int,
-                mu : float = 0.0,
-                theta : float = 0.15,
-                sigma : float = 0.2,
+                size = 1,
+                mu = 0.0,
+                theta = 0.15,
+                sigma = 0.2,
         ):
+        self.size = size
         self.state = np.float64(0.0)
-        self.mu = mu * np.ones(size)
+        self.mu = mu * np.ones(self.size)
         self.theta = theta
         self.sigma = sigma
         self.reset()
