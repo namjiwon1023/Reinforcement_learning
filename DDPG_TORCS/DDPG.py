@@ -135,8 +135,39 @@ if __name__ == "__main__":
             ob = env.reset(relaunch=True)
         else:
             ob = env.reset()
+        print("ob:",ob)
+        '''ob: Observaion(focus=array([0.17946899, 0.17301649, 0.16678551, 0.160778  , 0.1549965 ],dtype=float32),
+        speedX=-0.00010545899470647176,
+        speedY=0.00011448666453361511,
+        speedZ=-0.0002021526669462522,
+        angle=-0.00027785650014532017,
+        damage=array(0., dtype=float32),
+        opponents=array([1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,1., 1.], dtype=float32),
+        rpm=0.094247802734375,
+            track=array([0.0564915 , 0.316134  , 0.254871  , 0.21488701, 0.193023  ,
+                                    0.1827775 , 0.17751051, 0.17301649, 0.16987301, 0.16678551,
+                                    0.16375351, 0.160778  , 0.156707  , 0.15218951, 0.1441075 ,
+                                    0.1294325 , 0.1091015 , 0.08792149, 0.0508225 ], dtype=float32),
+        trackPos=0.0020843499805778265,
+        wheelSpinVel=array([0.      , 0.      , 0.      , 0.303038], dtype=float32))
+'''
+
 
         s = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY,  ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
+        print("s.shape:",s.shape) # s.shape: (29,)
+        print("s.shape[0]",s.shape[0]) # s.shape[0]: 29
+        print("s:",s)
+        '''s: [-2.77856500e-04  5.64914979e-02  3.16134006e-01  2.54871011e-01
+            2.14887008e-01  1.93022996e-01  1.82777494e-01  1.77510515e-01
+            1.73016489e-01  1.69873014e-01  1.66785508e-01  1.63753510e-01
+            1.60778001e-01  1.56707004e-01  1.52189508e-01  1.44107506e-01
+            1.29432499e-01  1.09101497e-01  8.79214928e-02  5.08225001e-02
+            2.08434998e-03 -1.05458995e-04  1.14486665e-04 -2.02152667e-04
+            0.00000000e+00  0.00000000e+00  0.00000000e+00  3.03038000e-03
+            9.42478027e-02]
+'''
+
+
 
         total_reward = 0.
         done = False
@@ -154,21 +185,34 @@ if __name__ == "__main__":
             a_n = np.zeros([1, agent.action_size])
 
             a = agent.actor_eval(torch.tensor(s.reshape(1, s.shape[0]), device=device).float()).detach().cpu().numpy()
-
+            print("a.shape:",a.shape)   # a.shape: (1, 3)
+            print("a",a) # a [[2.6901831e-12 5.0000000e-01 5.0000000e-01]]
             noise[0][0] = agent.noise_steering.sample() * max(agent.epsilon, 0)
             noise[0][1] = agent.noise_acceleration.sample() * max(agent.epsilon, 0)
             noise[0][2] = agent.noise_brake.sample() * max(agent.epsilon, 0)
-
+            print(noise.shape)  # (1, 3)
+            print(noise)  # [[ 0.01292339  0.59637893 -0.08812192]]
 
             a_n[0][0] = a[0][0] + noise[0][0]
             a_n[0][1] = a[0][1] + noise[0][1]
             a_n[0][2] = a[0][2] + noise[0][2]
-
+            print("a_n.shape:",a_n.shape)  # a_n.shape: (1, 3)
+            print("a_n:",a_n)  # a_n: [[0.01292339 1.09637893 0.41187808]]
 
             ob, r, done, info = env.step(a_n[0])
 
             s_ = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY, ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
-
+            print("s_.shape:",s_.shape)   # s_.shape: (29,)
+            print("s_:",s_)
+            '''s_: [-2.24125915e-04  5.64539991e-02  3.16083997e-01  2.54840493e-01
+                2.14871496e-01  1.93016484e-01  1.82775989e-01  1.77511007e-01
+                1.73019007e-01  1.69876993e-01  1.66791007e-01  1.63760513e-01
+                1.60786003e-01  1.56716496e-01  1.52201504e-01  1.44122496e-01
+                1.29454002e-01  1.09129496e-01  8.79549980e-02  5.08549958e-02
+                2.90324003e-03 -4.90586658e-04  4.52576677e-04 -1.41160004e-04
+                2.80751996e-02  6.15701033e-03  2.00121999e-02  2.00449992e-02
+                9.42478027e-02]
+                '''
             agent.transition = [s, a_n[0], r, s_, done]
             agent.memory.store(*agent.transition)
             if agent.memory.__len__() > agent.train_start:
