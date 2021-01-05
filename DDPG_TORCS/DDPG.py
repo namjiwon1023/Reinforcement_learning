@@ -175,13 +175,13 @@ if __name__ == "__main__":
             a = agent.actor_eval(torch.unsqueeze(torch.FloatTensor(s),0).to(device)).detach().cpu().numpy()
 
             # Setting Noise Functions
-            noise[0][0] = max(epsilon, 0) * OU.function(a[0][0], 0.0, 0.60, 0.30)
-            noise[0][1] = max(epsilon, 0) * OU.function(a[0][1], 0.5, 1.00, 0.10)
-            noise[0][2] = max(epsilon, 0) * OU.function(a[0][2], -0.1, 1.00, 0.05)
+            noise[0][0] = max(agent.epsilon, 0) * OU.function(a[0][0], 0.0, 0.60, 0.30)
+            noise[0][1] = max(agent.epsilon, 0) * OU.function(a[0][1], 0.5, 1.00, 0.10)
+            noise[0][2] = max(agent.epsilon, 0) * OU.function(a[0][2], -0.1, 1.00, 0.05)
 
             if random.random() <= 0.1:
                 print("apply the brake")
-                noise[0][2] = max(epsilon, 0) * OU.function(a[0][2], 0.2, 1.00, 0.10)
+                noise[0][2] = max(agent.epsilon, 0) * OU.function(a[0][2], 0.2, 1.00, 0.10)
 
             a_n[0][0] = a[0][0] + noise[0][0]
             a_n[0][1] = a[0][1] + noise[0][1]
