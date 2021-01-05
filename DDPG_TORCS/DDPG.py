@@ -173,7 +173,7 @@ if __name__ == "__main__":
             a_n = np.zeros([1, agent.action_size])
 
             # a = agent.actor_eval(torch.tensor(s.reshape(1, s.shape[0]), device=device).float()).detach().cpu().numpy()
-            a = agent.actor_eval(torch.unsqueeze(torch.FloatTensor(s),0), device=device).detach().cpu().numpy()
+            a = agent.actor_eval(torch.unsqueeze(torch.FloatTensor(s),0)).to(device).detach().cpu().numpy()
 
             noise[0][0] = agent.noise_steering.sample() * max(agent.epsilon, 0)
             noise[0][1] = agent.noise_acceleration.sample() * max(agent.epsilon, 0)

@@ -3,19 +3,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class Actor(nn.Module):
-    def __init__(self, state_size):
+    def __init__(self, state_size, hidden_layer_1 = 300, hidden_layer_2 = 600):
         super(Actor, self).__init__()
 
-        self.fc1 = nn.Linear(state_size, 300)
-        self.fc2 = nn.Linear(300, 600)
+        self.fc1 = nn.Linear(state_size, hidden_layer_1)
+        self.fc2 = nn.Linear(hidden_layer_1, hidden_layer_2)
 
-        self.steering = nn.Linear(600, 1)
+        self.steering = nn.Linear(hidden_layer_2, 1)
         self.steering.weight.data.normal_(0,1e-4)
 
-        self.acceleration = nn.Linear(600, 1)
+        self.acceleration = nn.Linear(hidden_layer_2, 1)
         self.acceleration.weight.data.normal_(0,1e-4)
 
-        self.brake = nn.Linear(600, 1)
+        self.brake = nn.Linear(hidden_layer_2, 1)
         self.brake.weight.data.normal_(0,1e-4)
 
     def forward(self, state):
