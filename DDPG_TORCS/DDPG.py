@@ -52,6 +52,7 @@ class Agent(object):
         self.noise_steering = OUNoise(size = 1, mu = 0.0, theta = 0.6, sigma = 0.30)
         self.noise_acceleration = OUNoise(size = 1, mu = 0.5, theta = 1.0, sigma = 0.10)
         self.noise_brake = OUNoise(size = 1, mu = -0.1, theta = 1.0, sigma = 0.05)
+        self.noise_random_brake = OUNoise(size = 1, mu = 0.2, theta = 1.00, sigma = 0.10)
 
         self.dirPath = './load_state/DDPG_epsilon_'
         self.Actor_dirPath = './load_state/DDPG_actor_'
@@ -115,7 +116,7 @@ if __name__ == "__main__":
                 'batch_size' : 32,
                 'state_size' : 29,
                 'action_size' : 3,
-                'gamma' : 0.99,
+                'gamma' : 0.95,
                 'tau' : 1e-3,
                 'vision' : False,
                 'actor_lr' : 1e-4,
@@ -162,6 +163,9 @@ if __name__ == "__main__":
             noise[0][1] = agent.noise_acceleration.sample() * max(agent.epsilon, 0)
             noise[0][2] = agent.noise_brake.sample() * max(agent.epsilon, 0)
 
+            if random.random() <= 0.1:
+                print('apply the brake')
+                noise[0][2] = max(agent.epsilon, 0) * agent.noise_random_brake.sample()
 
             a_n[0][0] = a[0][0] + noise[0][0]
             a_n[0][1] = a[0][1] + noise[0][1]
