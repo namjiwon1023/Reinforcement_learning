@@ -29,31 +29,40 @@ class Agent(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
+        # memory setting
         self.memory = ReplayBuffer(self.state_size, self.memory_size, self.batch_size)
         self.transition = list()
 
+        # Actor Network setting(eval , target)
         self.actor_eval = Actor(self.state_size).to(device)
         self.actor_eval.apply(init_weights)
+
         self.actor_target = Actor(self.state_size).to(device)
         self.actor_target.load_state_dict(self.actor_eval.state_dict())
         self.actor_target.eval()
 
+        # Critic Network setting(eval , target)
         self.critic_eval = Critic(self.state_size, self.action_size).to(device)
+
         self.critic_target = Critic(self.state_size, self.action_size).to(device)
         self.critic_target.load_state_dict(self.critic_eval.state_dict())
         self.critic_target.eval()
 
+        # Optimization Setting
         self.actor_optimizer = optim.Adam(self.actor_eval.parameters(), lr=self.actor_lr)
         self.critic_optimizer = optim.Adam(self.critic_eval.parameters(), lr=self.critic_lr)
 
+        # Critic Loss Function
         self.critic_loss_func = nn.MSELoss()
         self.critic_L = 0.
 
+        # OUNoise Setting
         self.noise_steering = OUNoise(size = 1, mu = 0.0, theta = 0.6, sigma = 0.30)
         self.noise_acceleration = OUNoise(size = 1, mu = 0.5, theta = 1.0, sigma = 0.10)
         self.noise_brake = OUNoise(size = 1, mu = -0.1, theta = 1.0, sigma = 0.05)
         self.noise_random_brake = OUNoise(size = 1, mu = 0.2, theta = 1.00, sigma = 0.10)
 
+        # Store Neural Network Parameters
         self.dirPath = './load_state/DDPG_epsilon_'
         self.Actor_dirPath = './load_state/DDPG_actor_'
         self.Critic_dirPath = './load_state/DDPG_critic_'
@@ -66,6 +75,7 @@ class Agent(object):
                 self.epsilon = param.get('epsilon')
 
     def learn(self):
+        # Random Samples
         samples = self.memory.sample_batch()
 
         state = torch.FloatTensor(samples['obs']).to(device)
@@ -95,6 +105,9 @@ class Agent(object):
         actor_loss.backward()
         self.actor_optimizer.step()
 
+        # Soft Update -> Target Network Parameters
+        # θQ‘←τθQ+(1−τ)θQ‘
+        # θμ‘←τθμ+(1−τ)θμ‘
         self._target_soft_update()
 
     def _target_soft_update(self):
@@ -111,6 +124,7 @@ class Agent(object):
             target_params.data.copy_(tau * eval_params.data + (1.0 - tau) * target_params.data)
 
 if __name__ == "__main__":
+
     params = {
                 'memory_size' : int(1e5),
                 'batch_size' : 32,
@@ -125,21 +139,22 @@ if __name__ == "__main__":
                 'load_model' : False,
                 'load_episode' : 0,
                 'step' : 0,
-                'train_start' : 32,
         }
+
     agent = Agent(**params)
+
+    # Environment Setting
     env = TorcsEnv(vision = agent.vision, throttle = True, gear_change = False)
     param_dictionary = dict()
 
     for e in range(agent.load_episode, EPISODE_COUNT):
+
         if np.mod(e, 3) == 0 :
             ob = env.reset(relaunch=True)
         else:
             ob = env.reset()
 
-
         s = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY,  ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
-
 
         total_reward = 0.
         done = False
@@ -151,6 +166,7 @@ if __name__ == "__main__":
                 pickle.dump(param_dictionary, outfile)
 
         for i in range(MAX_STEPS):
+
             loss = 0
             agent.epsilon -= 1.0 / EXPLORE
             noise = np.zeros([1, agent.action_size])
@@ -171,15 +187,14 @@ if __name__ == "__main__":
             a_n[0][1] = a[0][1] + noise[0][1]
             a_n[0][2] = a[0][2] + noise[0][2]
 
-
-            ob, r, done, info = env.step(a_n[0])
+            ob, r, done, _ = env.step(a_n[0])
 
             s_ = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY, ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
 
             agent.transition = [s, a_n[0], r, s_, done]
             agent.memory.store(*agent.transition)
-            if agent.memory.__len__() > agent.train_start:
-                agent.learn()
+
+            agent.learn()
 
             loss += agent.critic_L
             total_reward += r
