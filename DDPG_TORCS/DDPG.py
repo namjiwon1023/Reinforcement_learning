@@ -176,18 +176,12 @@ if __name__ == "__main__":
             a = agent.actor_eval(torch.unsqueeze(torch.FloatTensor(s),0).to(device)).detach().cpu().numpy()
 
             # Setting Noise Functions
-            noise_steering = OUNoise.OU(x = a[0][0],mu = 0.0, theta = 0.6, sigma = 0.30)
-            noise_acceleration = OUNoise.OU(x = a[0][1], mu = 0.5, theta = 1.0, sigma = 0.10)
-            noise_brake = OUNoise.OU(x = a[0][2], mu = -0.1, theta = 1.0, sigma = 0.05)
-            noise_random_brake = OUNoise.OU(x = a[0][2], mu = 0.2, theta = 1.00, sigma = 0.10)
-
-            noise[0][0] = noise_steering * max(agent.epsilon, 0)
-            noise[0][1] = noise_acceleration * max(agent.epsilon, 0)
-            noise[0][2] = noise_brake * max(agent.epsilon, 0)
+            noise[0][0] = OUNoise.OU(x = a[0][0],mu = 0.0, theta = 0.6, sigma = 0.30) * max(agent.epsilon, 0)
+            noise[0][1] = OUNoise.OU(x = a[0][1], mu = 0.5, theta = 1.0, sigma = 0.10) * max(agent.epsilon, 0)
+            noise[0][2] = OUNoise.OU(x = a[0][2], mu = -0.1, theta = 1.0, sigma = 0.05) * max(agent.epsilon, 0)
 
             if random.random() <= 0.1:
-                print('apply the brake')
-                noise[0][2] = noise_random_brake * max(agent.epsilon, 0)
+                noise[0][2] = OUNoise.OU(x = a[0][2], mu = 0.2, theta = 1.00, sigma = 0.10) * max(agent.epsilon, 0)
 
             a_n[0][0] = a[0][0] + noise[0][0]
             a_n[0][1] = a[0][1] + noise[0][1]

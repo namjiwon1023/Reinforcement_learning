@@ -3,7 +3,7 @@ import random
 
 class OUNoise():
 
-    def OU(self, x, mu = 0, theta = 0.15, sigma = 0.2):
+    def OU(self, x, mu, theta, sigma):
         """
         Ornstein-Uhlenbeck process.
         ou = θ * (μ - x) + σ * w
