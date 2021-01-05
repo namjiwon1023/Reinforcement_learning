@@ -56,7 +56,7 @@ class Agent(object):
         self.critic_loss_func = nn.MSELoss()
         self.critic_L = 0.
 
-        # Store Neural Network Parameters
+        # Load Neural Network Parameters
         self.dirPath = './load_state/DDPG_epsilon_'
         self.Actor_dirPath = './load_state/DDPG_actor_'
         self.Critic_dirPath = './load_state/DDPG_critic_'
@@ -119,6 +119,7 @@ class Agent(object):
 
 if __name__ == "__main__":
 
+    # Setting Neural Network Parameters
     params = {
                 'memory_size' : int(1e5),
                 'batch_size' : 32,
@@ -136,11 +137,15 @@ if __name__ == "__main__":
         }
 
     agent = Agent(**params)
+
     # Environment Setting
     env = TorcsEnv(vision = agent.vision, throttle = True, gear_change = False)
     param_dictionary = dict()
+
+    # Ornstein-Uhlenbeck Process
     OUNoise = OUNoise()
 
+    # Train Process
     for e in range(agent.load_episode, EPISODE_COUNT):
 
         if np.mod(e, 3) == 0 :
@@ -153,6 +158,7 @@ if __name__ == "__main__":
         total_reward = 0.
         done = False
 
+        # Store Neural Network Parameters
         if e % 10 == 0:
             torch.save(agent.actor_eval.state_dict(), agent.Actor_dirPath + str(e) + '.h5')
             torch.save(agent.critic_eval.state_dict(), agent.Critic_dirPath + str(e) + '.h5')
@@ -166,8 +172,10 @@ if __name__ == "__main__":
             noise = np.zeros([1, agent.action_size])
             a_n = np.zeros([1, agent.action_size])
 
+            # Choose Action
             a = agent.actor_eval(torch.unsqueeze(torch.FloatTensor(s),0).to(device)).detach().cpu().numpy()
 
+            # Setting Noise Functions
             noise_steering = OUNoise.OU(x = a[0][0],mu = 0.0, theta = 0.6, sigma = 0.30)
             noise_acceleration = OUNoise.OU(x = a[0][1], mu = 0.5, theta = 1.0, sigma = 0.10)
             noise_brake = OUNoise.OU(x = a[0][2], mu = -0.1, theta = 1.0, sigma = 0.05)
