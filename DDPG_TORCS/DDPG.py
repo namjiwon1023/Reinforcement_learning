@@ -11,7 +11,7 @@ import pickle
 
 from Actor import Actor
 from Critic import Critic
-from OUNoise import OUNoise
+from OU import OU
 from ReplayBuffer import ReplayBuffer
 
 EPISODE_COUNT = int(2e3)
@@ -143,8 +143,7 @@ if __name__ == "__main__":
     param_dictionary = dict()
 
     # Ornstein-Uhlenbeck Process
-    OUNoise = OUNoise()
-
+    OU = OU()
     # Train Process
     for e in range(agent.load_episode, EPISODE_COUNT):
 
@@ -176,12 +175,13 @@ if __name__ == "__main__":
             a = agent.actor_eval(torch.unsqueeze(torch.FloatTensor(s),0).to(device)).detach().cpu().numpy()
 
             # Setting Noise Functions
-            noise[0][0] = OUNoise.OU(x = a[0][0],mu = 0.0, theta = 0.6, sigma = 0.30) * max(agent.epsilon, 0)
-            noise[0][1] = OUNoise.OU(x = a[0][1], mu = 0.5, theta = 1.0, sigma = 0.10) * max(agent.epsilon, 0)
-            noise[0][2] = OUNoise.OU(x = a[0][2], mu = -0.1, theta = 1.0, sigma = 0.05) * max(agent.epsilon, 0)
+            noise[0][0] = max(epsilon, 0) * OU.function(a_t_original[0][0], 0.0, 0.60, 0.30)
+            noise[0][1] = max(epsilon, 0) * OU.function(a_t_original[0][1], 0.5, 1.00, 0.10)
+            noise[0][2] = max(epsilon, 0) * OU.function(a_t_original[0][2], -0.1, 1.00, 0.05)
 
             if random.random() <= 0.1:
-                noise[0][2] = OUNoise.OU(x = a[0][2], mu = 0.2, theta = 1.00, sigma = 0.10) * max(agent.epsilon, 0)
+                print("apply the brake")
+                noise[0][2] = max(epsilon, 0) * OU.function(a_t_original[0][2], 0.2, 1.00, 0.10)
 
             a_n[0][0] = a[0][0] + noise[0][0]
             a_n[0][1] = a[0][1] + noise[0][1]
