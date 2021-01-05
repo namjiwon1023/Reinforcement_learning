@@ -1,7 +1,6 @@
 import copy
 import random
 from gym_torcs import TorcsEnv
-import gym
 import numpy as np
 import torch
 import torch.nn as nn
@@ -13,6 +12,9 @@ from Actor import Actor
 from Critic import Critic
 from OU import OU
 from ReplayBuffer import ReplayBuffer
+
+# Ornstein-Uhlenbeck Process
+OU = OU()
 
 EPISODE_COUNT = int(2e3)
 MAX_STEPS = int(1e5)
@@ -142,12 +144,10 @@ if __name__ == "__main__":
     env = TorcsEnv(vision = agent.vision, throttle = True, gear_change = False)
     param_dictionary = dict()
 
-    # Ornstein-Uhlenbeck Process
-    OU = OU()
     # Train Process
     for e in range(agent.load_episode, EPISODE_COUNT):
 
-        if np.mod(e, 3) == 0 :
+        if e % 3 == 0 :
             ob = env.reset(relaunch=True)
         else:
             ob = env.reset()
