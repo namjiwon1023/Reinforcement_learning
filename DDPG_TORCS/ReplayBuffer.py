@@ -1,5 +1,5 @@
 import numpy as np
-import random
+
 
 class ReplayBuffer:
 
@@ -29,7 +29,7 @@ class ReplayBuffer:
 
     def sample_batch(self):
         if self.count < self.batch_size:
-            index = random.sample(self.size, self.count)
+            index = np.random.choice(self.size, self.count)
         else:
             index = np.random.choice(self.size, self.batch_size, replace = False)
 
