@@ -184,7 +184,8 @@ if __name__ == "__main__":
             noise = np.zeros([1, agent.action_size])
             a_n = np.zeros([1, agent.action_size])
 
-            a = agent.actor_eval(torch.tensor(s.reshape(1, s.shape[0]), device=device).float()).detach().cpu().numpy()
+            # a = agent.actor_eval(torch.tensor(s.reshape(1, s.shape[0]), device=device).float()).detach().cpu().numpy()
+            a = agent.actor_eval(torch.unsqueeze(torch.FloatTensor(s),0), device=device).detach().cpu().numpy()
             print("a.shape:",a.shape)   # a.shape: (1, 3)
             print("a",a) # a [[2.6901831e-12 5.0000000e-01 5.0000000e-01]]
             noise[0][0] = agent.noise_steering.sample() * max(agent.epsilon, 0)
