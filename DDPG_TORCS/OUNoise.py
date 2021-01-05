@@ -1,29 +1,19 @@
 import numpy as np
-import copy
 import random
 
-class OUNoise:
+class OUNoise():
 
-    def __init__(self,
-                size = 1,
-                mu = 0.0,
-                theta = 0.15,
-                sigma = 0.2,
-        ):
-        self.size = size
-        self.state = np.float64(0.0)
-        self.mu = mu * np.ones(self.size)
-        self.theta = theta
-        self.sigma = sigma
-        self.reset()
+    def OU(self, x, mu = 0, theta = 0.15, sigma = 0.2):
+        """
+        Ornstein-Uhlenbeck process.
+        ou = θ * (μ - x) + σ * w
 
-    def reset(self):
-        self.state = copy.copy(self.mu)
+        {x: action value,
+        mu: μ, mean fo values,
+        theta: θ, rate the variable reverts towards to the mean,
+        sigma：σ, degree of volatility of the process,
+        }
 
-    def sample(self):
-        x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * np.array(
-            [random.random() for _ in range(len(x))]
-            )
-        self.state = x + dx
-        return self.state
+        Returns: OU value
+        """
+        return theta * (mu - x) + sigma * np.random.randn(1)
