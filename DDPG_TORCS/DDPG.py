@@ -1,20 +1,23 @@
 import copy
 import random
+
 from gym_torcs import TorcsEnv
+
 import numpy as np
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+
 import pickle
+
+import matplotlib.pyplot as plt
 
 from Actor import Actor
 from Critic import Critic
 from OU import OU
 from ReplayBuffer import ReplayBuffer
-
-# Ornstein-Uhlenbeck Process
-OU = OU()
 
 EPISODE_COUNT = int(2e3)
 MAX_STEPS = int(1e5)
@@ -54,9 +57,11 @@ class Agent(object):
         self.actor_optimizer = optim.Adam(self.actor_eval.parameters(), lr=self.actor_lr)
         self.critic_optimizer = optim.Adam(self.critic_eval.parameters(), lr=self.critic_lr)
 
-        # Critic Loss Function
+        # Loss Function
         self.critic_loss_func = nn.MSELoss()
+
         self.critic_L = 0.
+        self.actor_L = 0.
 
         # Load Neural Network Parameters
         self.dirPath = './load_state/DDPG_epsilon_'
@@ -66,9 +71,12 @@ class Agent(object):
         if self.load_model :
             self.actor_eval.load_state_dict(torch.load(self.Actor_dirPath + str(self.load_episode) + '.h5'))
             self.critic_eval.load_state_dict(torch.load(self.Critic_dirPath + str(self.load_episode) + '.h5'))
-            with open(self.dirPath + str(self.load_episode) + '.pkl') as outfile:
+            with open(self.dirPath + str(self.load_episode) + '.pkl','rb') as outfile:
                 param = pickle.load(outfile)
-                self.epsilon = param.get('epsilon')
+                if param is not None:
+                    self.epsilon = param.get('epsilon')
+                else:
+                    pass
 
     def learn(self):
         # Random Samples
@@ -96,6 +104,7 @@ class Agent(object):
 
         # Actor Network Update
         actor_loss = -self.critic_eval(state, self.actor_eval(state)).to(device).mean()
+        self.actor_L = actor_loss.detach().cpu().numpy()
 
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
@@ -119,6 +128,25 @@ class Agent(object):
             ):
             target_params.data.copy_(tau * eval_params.data + (1.0 - tau) * target_params.data)
 
+    def _plot(self, frame_idx, scores, actor_losses, critic_losses,):
+        def subplot(loc, title, values):
+            plt.subplot(loc)
+            plt.title(title)
+            plt.plot(values)
+
+        subplot_params = [
+            (131, f"frame {frame_idx}. score: {np.mean(scores[-10:])}", scores),
+            (132, "actor_loss", actor_losses),
+            (133, "critic_loss", critic_losses),
+        ]
+
+        plt.figure(figsize=(30, 5))
+        for loc, title, values in subplot_params:
+            subplot(loc, title, values)
+        plt.savefig('./torcs_al_cl_r.jpg')
+        plt.show()
+
+
 if __name__ == "__main__":
 
     # Setting Neural Network Parameters
@@ -136,13 +164,21 @@ if __name__ == "__main__":
                 'load_model' : False,
                 'load_episode' : 0,
                 'step' : 0,
+                'train' : True,
         }
 
     agent = Agent(**params)
 
+    # Ornstein-Uhlenbeck Process
+    OU = OU()
+
     # Environment Setting
     env = TorcsEnv(vision = agent.vision, throttle = True, gear_change = False)
     param_dictionary = dict()
+
+    actor_losses = []
+    critic_losses = []
+    scores = []
 
     # Train Process
     for e in range(agent.load_episode, EPISODE_COUNT):
@@ -154,15 +190,17 @@ if __name__ == "__main__":
 
         s = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY,  ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
 
-        total_reward = 0.
-        done = False
+        score = 0.
 
         # Store Neural Network Parameters
         if e % 10 == 0:
             torch.save(agent.actor_eval.state_dict(), agent.Actor_dirPath + str(e) + '.h5')
             torch.save(agent.critic_eval.state_dict(), agent.Critic_dirPath + str(e) + '.h5')
             with open(agent.dirPath + str(e) + '.pkl' , 'wb') as outfile:
-                pickle.dump(param_dictionary, outfile)
+                if agent.epsilon is not None:
+                    pickle.dump(param_dictionary, outfile)
+                else:
+                    pass
 
         for i in range(MAX_STEPS):
 
@@ -175,13 +213,16 @@ if __name__ == "__main__":
             a = agent.actor_eval(torch.unsqueeze(torch.FloatTensor(s),0).to(device)).detach().cpu().numpy()
 
             # Setting Noise Functions
-            noise[0][0] = max(agent.epsilon, 0) * OU.function(a[0][0], 0.0, 0.60, 0.30)
-            noise[0][1] = max(agent.epsilon, 0) * OU.function(a[0][1], 0.5, 1.00, 0.10)
-            noise[0][2] = max(agent.epsilon, 0) * OU.function(a[0][2], -0.1, 1.00, 0.05)
+            if agent.train is True:
+                noise[0][0] = max(agent.epsilon, 0) * OU.function(a[0][0], 0.0, 0.60, 0.30)
+                noise[0][1] = max(agent.epsilon, 0) * OU.function(a[0][1], 0.5, 1.00, 0.10)
+                noise[0][2] = max(agent.epsilon, 0) * OU.function(a[0][2], -0.1, 1.00, 0.05)
 
-            if random.random() <= 0.1:
-                print("apply the brake")
-                noise[0][2] = max(agent.epsilon, 0) * OU.function(a[0][2], 0.2, 1.00, 0.10)
+                if random.random() <= 0.1:
+                    print("apply the brake")
+                    noise[0][2] = max(agent.epsilon, 0) * OU.function(a[0][2], 0.2, 1.00, 0.10)
+            else:
+                pass
 
             a_n[0][0] = a[0][0] + noise[0][0]
             a_n[0][1] = a[0][1] + noise[0][1]
@@ -196,22 +237,33 @@ if __name__ == "__main__":
 
             agent.learn()
 
-            loss += agent.critic_L
-            total_reward += r
+            loss = agent.critic_L
+            score += r
             s = s_
 
             print('Episode : {} Step : {}  Action : {} Reward : {} Loss : {}'.format(e, agent.step , a_n, r, loss))
             agent.step += 1
 
             if done :
+
+                scores.append(score)
+                actor_losses.append(agent.actor_L)
+                critic_losses.append(agent.critic_L)
+
                 param_keys = ['epsilon']
                 param_value = [agent.epsilon]
                 param_dictionary = dict(zip(param_keys,param_value))
+
                 break
-        print('-------------------------------------Result------------------------------------------------')
-        print('---------------------------Episode : {} Total_Reward : {} ---------------------------------'.format(e, total_reward))
-        print('---------------------------Total_Step : {}  -----------------------------------------------'.format(agent.step))
-        print('-------------------------------------------------------------------------------------------')
+
+        if e == EPISODE_COUNT:
+            agent._plot(agent.step, scores, actor_losses, critic_losses,)
+
+        print('|============================================================================================|')
+        print('|=========================================  Result  =========================================|')
+        print('|                                     Total_Step : {}  '.format(agent.step))
+        print('|                      Episode : {} Total_Reward : {} '.format(e, score))
+        print('|============================================================================================|')
 
     env.end()
     print('Finish.')
