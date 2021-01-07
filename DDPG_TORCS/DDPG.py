@@ -161,8 +161,8 @@ if __name__ == "__main__":
                 'actor_lr' : 1e-4,
                 'critic_lr' : 1e-3,
                 'epsilon' : 1,
-                'load_model' : False,
-                'load_episode' : 0,
+                'load_model' : True,
+                'load_episode' : 890,
                 'step' : 0,
                 'train' : True,
         }
