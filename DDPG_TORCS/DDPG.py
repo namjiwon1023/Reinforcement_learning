@@ -196,6 +196,7 @@ if __name__ == "__main__":
         if e % 10 == 0:
             torch.save(agent.actor_eval.state_dict(), agent.Actor_dirPath + str(e) + '.h5')
             torch.save(agent.critic_eval.state_dict(), agent.Critic_dirPath + str(e) + '.h5')
+            np.savetxt("./test.txt",scores, delimiter=",")
             with open(agent.dirPath + str(e) + '.pkl' , 'wb') as outfile:
                 if agent.epsilon is not None:
                     pickle.dump(param_dictionary, outfile)
@@ -258,6 +259,7 @@ if __name__ == "__main__":
 
         if e == EPISODE_COUNT:
             agent._plot(agent.step, scores, actor_losses, critic_losses,)
+            np.savetxt("./scores.txt",scores, delimiter=",")
 
         print('|============================================================================================|')
         print('|=========================================  Result  =========================================|')
