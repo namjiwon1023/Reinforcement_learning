@@ -11,13 +11,14 @@ import pickle
 
 from Actor import Actor
 from Critic import Critic
-from OUNoise import OUNoise
 from ReplayBuffer import ReplayBuffer
+from OU import OU
 
 EPISODE_COUNT = int(2e3)
 MAX_STEPS = int(1e5)
 EXPLORE = 100000.
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+OU = OU()
 
 def init_weights(m):
     if type(m) == nn.Linear:
@@ -49,10 +50,6 @@ class Agent(object):
         self.critic_loss_func = nn.MSELoss()
         self.critic_L = 0.
 
-        self.noise_steering = OUNoise(size = 1, mu = 0.0, theta = 0.6, sigma = 0.30)
-        self.noise_acceleration = OUNoise(size = 1, mu = 0.5, theta = 1.0, sigma = 0.10)
-        self.noise_brake = OUNoise(size = 1, mu = -0.1, theta = 1.0, sigma = 0.05)
-
         self.dirPath = './load_state/DDPG_epsilon_'
         self.Actor_dirPath = './load_state/DDPG_actor_'
         self.Critic_dirPath = './load_state/DDPG_critic_'
@@ -74,7 +71,7 @@ class Agent(object):
         done = torch.FloatTensor(samples['done']).reshape(-1,1).to(device)
 
         # Critic Network Update
-        mask = 1 - done
+        mask = (1 - done).to(device)
         next_action = self.actor_target(next_state).to(device)
         next_value = self.critic_target(next_state, next_action).to(device)
         target_values = (reward + self.gamma * next_value * mask).to(device)
@@ -88,7 +85,7 @@ class Agent(object):
         self.critic_optimizer.step()
 
         # Actor Network Update
-        actor_loss = -self.critic_eval(state, self.actor_eval(state)).mean().to(device)
+        actor_loss = -self.critic_eval(state, self.actor_eval(state)).to(device).mean()
 
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
@@ -115,7 +112,7 @@ if __name__ == "__main__":
                 'batch_size' : 32,
                 'state_size' : 29,
                 'action_size' : 3,
-                'gamma' : 0.95,
+                'gamma' : 0.99,
                 'tau' : 1e-3,
                 'vision' : False,
                 'actor_lr' : 1e-4,
@@ -124,49 +121,19 @@ if __name__ == "__main__":
                 'load_model' : False,
                 'load_episode' : 0,
                 'step' : 0,
-                'train_start' : 32,
         }
     agent = Agent(**params)
     env = TorcsEnv(vision = agent.vision, throttle = True, gear_change = False)
     param_dictionary = dict()
 
     for e in range(agent.load_episode, EPISODE_COUNT):
-        if np.mod(e, 3) == 0 :
+        if e % 5 == 0 :
             ob = env.reset(relaunch=True)
         else:
             ob = env.reset()
-        print("ob:",ob)
-        '''ob: Observaion(focus=array([0.17946899, 0.17301649, 0.16678551, 0.160778  , 0.1549965 ],dtype=float32),
-        speedX=-0.00010545899470647176,
-        speedY=0.00011448666453361511,
-        speedZ=-0.0002021526669462522,
-        angle=-0.00027785650014532017,
-        damage=array(0., dtype=float32),
-        opponents=array([1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,1., 1.], dtype=float32),
-        rpm=0.094247802734375,
-            track=array([0.0564915 , 0.316134  , 0.254871  , 0.21488701, 0.193023  ,
-                                    0.1827775 , 0.17751051, 0.17301649, 0.16987301, 0.16678551,
-                                    0.16375351, 0.160778  , 0.156707  , 0.15218951, 0.1441075 ,
-                                    0.1294325 , 0.1091015 , 0.08792149, 0.0508225 ], dtype=float32),
-        trackPos=0.0020843499805778265,
-        wheelSpinVel=array([0.      , 0.      , 0.      , 0.303038], dtype=float32))
-'''
 
 
         s = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY,  ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
-        print("s.shape:",s.shape) # s.shape: (29,)
-        print("s.shape[0]",s.shape[0]) # s.shape[0]: 29
-        print("s:",s)
-        '''s: [-2.77856500e-04  5.64914979e-02  3.16134006e-01  2.54871011e-01
-            2.14887008e-01  1.93022996e-01  1.82777494e-01  1.77510515e-01
-            1.73016489e-01  1.69873014e-01  1.66785508e-01  1.63753510e-01
-            1.60778001e-01  1.56707004e-01  1.52189508e-01  1.44107506e-01
-            1.29432499e-01  1.09101497e-01  8.79214928e-02  5.08225001e-02
-            2.08434998e-03 -1.05458995e-04  1.14486665e-04 -2.02152667e-04
-            0.00000000e+00  0.00000000e+00  0.00000000e+00  3.03038000e-03
-            9.42478027e-02]
-'''
-
 
 
         total_reward = 0.
@@ -184,47 +151,34 @@ if __name__ == "__main__":
             noise = np.zeros([1, agent.action_size])
             a_n = np.zeros([1, agent.action_size])
 
-            a = agent.actor_eval(torch.tensor(s.reshape(1, s.shape[0]), device=device).float()).detach().cpu().numpy()
-            print("a.shape:",a.shape)   # a.shape: (1, 3)
-            print("a",a) # a [[2.6901831e-12 5.0000000e-01 5.0000000e-01]]
-            noise[0][0] = agent.noise_steering.sample() * max(agent.epsilon, 0)
-            noise[0][1] = agent.noise_acceleration.sample() * max(agent.epsilon, 0)
-            noise[0][2] = agent.noise_brake.sample() * max(agent.epsilon, 0)
-            print(noise.shape)  # (1, 3)
-            print(noise)  # [[ 0.01292339  0.59637893 -0.08812192]]
+            a = agent.actor_eval(torch.unsqueeze(torch.FloatTensor(s),0).to(device)).detach().cpu().numpy()
+            noise[0][0] = max(agent.epsilon, 0) * OU.function(a[0][0], 0.0, 0.60, 0.30)
+            noise[0][1] = max(agent.epsilon, 0) * OU.function(a[0][1], 0.5, 1.00, 0.10)
+            noise[0][2] = max(agent.epsilon, 0) * OU.function(a[0][2], -0.1, 1.00, 0.05)
+
+            if random.random() <= 0.1:
+                print("apply the brake")
+                noise[0][2] = max(agent.epsilon, 0) * OU.function(a[0][2], 0.2, 1.00, 0.10)
 
             a_n[0][0] = a[0][0] + noise[0][0]
             a_n[0][1] = a[0][1] + noise[0][1]
             a_n[0][2] = a[0][2] + noise[0][2]
-            print("a_n.shape:",a_n.shape)  # a_n.shape: (1, 3)
-            print("a_n:",a_n)  # a_n: [[0.01292339 1.09637893 0.41187808]]
 
-            ob, r, done, info = env.step(a_n[0])
+            ob, r, done, _ = env.step(a_n[0])
 
             s_ = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY, ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
-            print("s_.shape:",s_.shape)   # s_.shape: (29,)
-            print("s_:",s_)
-            '''s_: [-2.24125915e-04  5.64539991e-02  3.16083997e-01  2.54840493e-01
-                2.14871496e-01  1.93016484e-01  1.82775989e-01  1.77511007e-01
-                1.73019007e-01  1.69876993e-01  1.66791007e-01  1.63760513e-01
-                1.60786003e-01  1.56716496e-01  1.52201504e-01  1.44122496e-01
-                1.29454002e-01  1.09129496e-01  8.79549980e-02  5.08549958e-02
-                2.90324003e-03 -4.90586658e-04  4.52576677e-04 -1.41160004e-04
-                2.80751996e-02  6.15701033e-03  2.00121999e-02  2.00449992e-02
-                9.42478027e-02]
-                '''
+
             agent.transition = [s, a_n[0], r, s_, done]
             agent.memory.store(*agent.transition)
-            if agent.memory.__len__() > agent.train_start:
-                agent.learn()
+            agent.learn()
 
-            agent.step += 1
             loss += agent.critic_L
             total_reward += r
             s = s_
+            print('Episode : {} Step : {}  Action : {} Reward : {} Loss : {}'.format(e, agent.step , a_n, r, loss))
+            agent.step += 1
 
             if done :
-                print('Episode : {} Step : {}  Action : {} Reward : {} Loss : {}'.format(e, agent.step , a_n, r, loss))
                 param_keys = ['epsilon']
                 param_value = [agent.epsilon]
                 param_dictionary = dict(zip(param_keys,param_value))

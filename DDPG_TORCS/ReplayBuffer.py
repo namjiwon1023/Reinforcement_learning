@@ -2,17 +2,17 @@ import numpy as np
 
 class ReplayBuffer:
 
-    def __init__(self, obs_dim , memory_size , batch_size = 32):
+    def __init__(self, obs_dim , memory_size , batch_size = 32, act_dim = 3):
 
         self.obs_buf = np.zeros([memory_size, obs_dim], dtype = np.float32)
         self.next_obs_buf = np.zeros([memory_size, obs_dim], dtype = np.float32)
-        self.acts_buf = np.zeros([memory_size,3], dtype=np.float32)
+        self.acts_buf = np.zeros([memory_size, act_dim], dtype=np.float32)
         self.rews_buf = np.zeros([memory_size], dtype=np.float32)
         self.done_buf = np.zeros([memory_size], dtype=np.float32)
 
         self.max_size, self.batch_size = memory_size, batch_size
         self.ptr, self.size, = 0,0
-        self.num = 0
+        self.count = 0
 
     def store(self, obs, act , rew, next_obs, done):
 
@@ -24,10 +24,13 @@ class ReplayBuffer:
 
         self.ptr = (self.ptr + 1) % self.max_size
         self.size = min(self.size +1, self.max_size)
-        self.num += 1
+        self.count += 1
 
     def sample_batch(self):
-        index = np.random.choice(self.size, size = self.batch_size , replace=False)
+        if self.count < self.batch_size:
+            index = np.random.choice(self.size, self.count)
+        else:
+            index = np.random.choice(self.size, self.batch_size , replace=False)
 
         return dict(obs = self.obs_buf[index],
                     act = self.acts_buf[index],
