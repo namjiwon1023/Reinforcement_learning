@@ -19,7 +19,7 @@ from Critic import Critic
 from GaussianNoise import GaussianNoise
 from ReplayBuffer import ReplayBuffer
 
-EPISODE_COUNT = 2000
+EPISODE_COUNT = 5000
 MAX_STEPS = 100000
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -34,9 +34,8 @@ class Agent(object):
             setattr(self, key, value)
 
         # GaussianNoise
-        self.GN = GaussianNoise()
-        self.train_noise = GN(self..action_size, self.train_noise, self.train_noise)
-        self.target_noise = GN(self.action_size, self.target_noise, self.target_noise)
+        self.train_noise = GaussianNoise(self.action_size, self.train_noise, self.train_noise)
+        self.target_noise = GaussianNoise(self.action_size, self.target_noise, self.target_noise)
 
         # memory setting
         self.memory = ReplayBuffer(self.state_size, self.memory_size, self.batch_size)
@@ -99,6 +98,7 @@ class Agent(object):
 
         noise = torch.FloatTensor(self.target_noise.sample()).to(device)
         clipped_noise = torch.clamp(noise, -self.target_noise_clip, self.target_noise_clip)
+        next_action = torch.zeros([1, self.action_size]).to(device)
 
         # Critic Network Update
         next_action[0][0] = (self.actor_target(next_state)[0][0] + clipped_noise[0]).clamp(-1.0, 1.0)
@@ -109,7 +109,7 @@ class Agent(object):
         # min
         next_value_1 = self.critic_target_1(next_state, next_action).to(device)
         next_value_2 = self.critic_target_2(next_state, next_action).to(device)
-        next_value = torch.min(next_value_1, next_value_2)
+        next_value = torch.min(next_value_1, next_value_2).to(device)
 
         target_values = (reward + self.gamma * next_value * mask).to(device)
         target_values = target_values.detach()
@@ -119,7 +119,7 @@ class Agent(object):
         critic_loss_1 = self.critic_loss_func(eval_values_1, target_values).to(device)
         critic_loss_2 = self.critic_loss_func(eval_values_2, target_values).to(device)
 
-        critic_loss = critic_loss_1 + critic_loss_2
+        critic_loss = (critic_loss_1 + critic_loss_2).to(device)
         self.critic_L = critic_loss.detach().cpu().numpy()
 
         self.critic_optimizer.zero_grad()
@@ -272,10 +272,6 @@ if __name__ == "__main__":
                 scores.append(score)
                 actor_losses.append(agent.actor_L)
                 critic_losses.append(agent.critic_L)
-
-                param_keys = ['epsilon']
-                param_value = [agent.epsilon]
-                param_dictionary = dict(zip(param_keys,param_value))
 
                 break
 
