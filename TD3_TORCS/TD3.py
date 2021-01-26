@@ -19,7 +19,7 @@ from Critic import Critic
 from GaussianNoise import GaussianNoise
 from ReplayBuffer import ReplayBuffer
 
-EPISODE_COUNT = 5000
+EPISODE_COUNT = 2000
 MAX_STEPS = 100000
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
