@@ -192,7 +192,7 @@ if __name__ == "__main__":
         s = ob.img
 
         score = 0.
-        np.savetxt("./test.txt",scores, delimiter=",")
+        np.savetxt("./Scores_step.txt",scores, delimiter=",")
         # Store Neural Network Parameters
         if e % 10 == 0:
             torch.save(agent.actor_eval.state_dict(), agent.Actor_dirPath + str(e) + '.h5')
@@ -260,7 +260,7 @@ if __name__ == "__main__":
 
         if e == (EPISODE_COUNT - 1):
             agent._plot(agent.step, scores, actor_losses, critic_losses,)
-            np.savetxt("./scores.txt",scores, delimiter=",")
+            np.savetxt("./Total_scores.txt",scores, delimiter=",")
 
         print('|============================================================================================|')
         print('|=========================================  Result  =========================================|')
