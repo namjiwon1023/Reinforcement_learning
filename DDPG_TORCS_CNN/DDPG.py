@@ -19,7 +19,7 @@ from Critic import Critic
 from OU import OU
 from ReplayBuffer import ReplayBuffer
 
-EPISODE_COUNT = 2000
+EPISODE_COUNT = 5000
 MAX_STEPS = 100000
 EXPLORE = 100000.
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -151,11 +151,11 @@ if __name__ == "__main__":
 
     # Setting Neural Network Parameters
     params = {
-                'memory_size' : int(1e5),
+                'memory_size' : 100000,
                 'batch_size' : 32,
                 'state_size' : 3,
                 'action_size' : 3,
-                'gamma' : 0.95,
+                'gamma' : 0.99,
                 'tau' : 1e-3,
                 'vision' : True,
                 'actor_lr' : 1e-4,
@@ -192,12 +192,11 @@ if __name__ == "__main__":
         s = ob.img
 
         score = 0.
-
+        np.savetxt("./test.txt",scores, delimiter=",")
         # Store Neural Network Parameters
         if e % 10 == 0:
             torch.save(agent.actor_eval.state_dict(), agent.Actor_dirPath + str(e) + '.h5')
             torch.save(agent.critic_eval.state_dict(), agent.Critic_dirPath + str(e) + '.h5')
-            np.savetxt("./test.txt",scores, delimiter=",")
             with open(agent.dirPath + str(e) + '.pkl' , 'wb') as outfile:
                 if agent.epsilon is not None:
                     pickle.dump(param_dictionary, outfile)
