@@ -19,15 +19,10 @@ from Critic import Critic
 from OU import OU
 from ReplayBuffer import ReplayBuffer
 
-EPISODE_COUNT = 5000
+EPISODE_COUNT = 100000
 MAX_STEPS = 100000
 EXPLORE = 100000.
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-# def init_weights(m):
-    # if type(m) == nn.Linear:
-        # nn.init.normal_(m.weight, 0, 1e-4)
-        # m.bias.data.fill_(0.0)
 
 class Agent(object):
     def __init__(self, **kwargs):
@@ -40,7 +35,6 @@ class Agent(object):
 
         # Actor Network setting(eval , target)
         self.actor_eval = Actor(self.state_size).to(device)
-        # self.actor_eval.apply(init_weights)
 
         self.actor_target = Actor(self.state_size).to(device)
         self.actor_target.load_state_dict(self.actor_eval.state_dict())
@@ -128,34 +122,16 @@ class Agent(object):
             ):
             target_params.data.copy_(tau * eval_params.data + (1.0 - tau) * target_params.data)
 
-    def _plot(self, frame_idx, scores, actor_losses, critic_losses,):
-        def subplot(loc, title, values):
-            plt.subplot(loc)
-            plt.title(title)
-            plt.plot(values)
-
-        subplot_params = [
-            (131, f"frame {frame_idx}. score: {np.mean(scores[-10:])}", scores),
-            (132, "actor_loss", actor_losses),
-            (133, "critic_loss", critic_losses),
-        ]
-
-        plt.figure(figsize=(30, 5))
-        for loc, title, values in subplot_params:
-            subplot(loc, title, values)
-        plt.savefig('./torcs_al_cl_r.jpg')
-        plt.show()
-
 
 if __name__ == "__main__":
 
     # Setting Neural Network Parameters
     params = {
-                'memory_size' : 100000,
-                'batch_size' : 32,
+                'memory_size' : 1000,
+                'batch_size' : 8,
                 'state_size' : 3,
                 'action_size' : 3,
-                'gamma' : 0.99,
+                'gamma' : 0.96,
                 'tau' : 1e-3,
                 'vision' : True,
                 'actor_lr' : 1e-4,
@@ -192,9 +168,12 @@ if __name__ == "__main__":
         s = ob.img
 
         score = 0.
-        np.savetxt("./Scores_step.txt",scores, delimiter=",")
+        np.savetxt("./Total_scores.txt",scores, delimiter=",")
+        np.savetxt("./actor_losses.txt",actor_losses, delimiter=",")
+        np.savetxt("./critic_losses.txt",critic_losses, delimiter=",")
+
         # Store Neural Network Parameters
-        if e % 10 == 0:
+        if e % 100 == 0:
             torch.save(agent.actor_eval.state_dict(), agent.Actor_dirPath + str(e) + '.h5')
             torch.save(agent.critic_eval.state_dict(), agent.Critic_dirPath + str(e) + '.h5')
             with open(agent.dirPath + str(e) + '.pkl' , 'wb') as outfile:
@@ -231,7 +210,6 @@ if __name__ == "__main__":
 
             ob, r, done, _ = env.step(a_n[0])
 
-            # s_ = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY, ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
             s_ = ob.img
 
             agent.transition = [s, a_n[0], r, s_, done]
@@ -257,10 +235,6 @@ if __name__ == "__main__":
                 param_dictionary = dict(zip(param_keys,param_value))
 
                 break
-
-        if e == (EPISODE_COUNT - 1):
-            agent._plot(agent.step, scores, actor_losses, critic_losses,)
-            np.savetxt("./Total_scores.txt",scores, delimiter=",")
 
         print('|============================================================================================|')
         print('|=========================================  Result  =========================================|')
