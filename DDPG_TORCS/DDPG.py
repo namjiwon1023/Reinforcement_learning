@@ -16,17 +16,14 @@ import matplotlib.pyplot as plt
 
 from Actor import Actor
 from Critic import Critic
-<<<<<<< HEAD
-=======
 from OU import OU
->>>>>>> 8e04a6df34f07022580d77a30b9ddb53c79768da
 from ReplayBuffer import ReplayBuffer
-from OU import OU
 
-EPISODE_COUNT = int(2e3)
-MAX_STEPS = int(1e5)
+EPISODE_COUNT = 2000
+MAX_STEPS = 100000
 EXPLORE = 100000.
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# Ornstein-Uhlenbeck Process
 OU = OU()
 
 def init_weights(m):
@@ -65,13 +62,10 @@ class Agent(object):
         # Loss Function
         self.critic_loss_func = nn.MSELoss()
 
-<<<<<<< HEAD
-=======
         self.critic_L = 0.
         self.actor_L = 0.
 
         # Load Neural Network Parameters
->>>>>>> 8e04a6df34f07022580d77a30b9ddb53c79768da
         self.dirPath = './load_state/DDPG_epsilon_'
         self.Actor_dirPath = './load_state/DDPG_actor_'
         self.Critic_dirPath = './load_state/DDPG_critic_'
@@ -112,10 +106,7 @@ class Agent(object):
 
         # Actor Network Update
         actor_loss = -self.critic_eval(state, self.actor_eval(state)).to(device).mean()
-<<<<<<< HEAD
-=======
         self.actor_L = actor_loss.detach().cpu().numpy()
->>>>>>> 8e04a6df34f07022580d77a30b9ddb53c79768da
 
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
@@ -162,11 +153,11 @@ if __name__ == "__main__":
 
     # Setting Neural Network Parameters
     params = {
-                'memory_size' : int(1e5),
-                'batch_size' : 32,
+                'memory_size' : 100000,
+                'batch_size' : 64,
                 'state_size' : 29,
                 'action_size' : 3,
-                'gamma' : 0.99,
+                'gamma' : 0.96,
                 'tau' : 1e-3,
                 'vision' : False,
                 'actor_lr' : 1e-4,
@@ -175,16 +166,10 @@ if __name__ == "__main__":
                 'load_model' : False,
                 'load_episode' : 0,
                 'step' : 0,
-<<<<<<< HEAD
-=======
                 'train' : True,
->>>>>>> 8e04a6df34f07022580d77a30b9ddb53c79768da
         }
 
     agent = Agent(**params)
-
-    # Ornstein-Uhlenbeck Process
-    OU = OU()
 
     # Environment Setting
     env = TorcsEnv(vision = agent.vision, throttle = True, gear_change = False)
@@ -196,29 +181,22 @@ if __name__ == "__main__":
 
     # Train Process
     for e in range(agent.load_episode, EPISODE_COUNT):
-<<<<<<< HEAD
-        if e % 5 == 0 :
-            ob = env.reset(relaunch=True)
-        else:
-            ob = env.reset()
-
-=======
 
         if e % 3 == 0 :
             ob = env.reset(relaunch=True)
         else:
             ob = env.reset()
->>>>>>> 8e04a6df34f07022580d77a30b9ddb53c79768da
 
         s = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY,  ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
 
         score = 0.
 
+        if e % 5 == 0 :
+            np.savetxt("./test.txt",scores, delimiter=",")
         # Store Neural Network Parameters
-        if e % 10 == 0:
+        if e % 50 == 0:
             torch.save(agent.actor_eval.state_dict(), agent.Actor_dirPath + str(e) + '.h5')
             torch.save(agent.critic_eval.state_dict(), agent.Critic_dirPath + str(e) + '.h5')
-            np.savetxt("./test.txt",scores, delimiter=",")
             with open(agent.dirPath + str(e) + '.pkl' , 'wb') as outfile:
                 if agent.epsilon is not None:
                     pickle.dump(param_dictionary, outfile)
@@ -232,16 +210,6 @@ if __name__ == "__main__":
             noise = np.zeros([1, agent.action_size])
             a_n = np.zeros([1, agent.action_size])
 
-<<<<<<< HEAD
-            a = agent.actor_eval(torch.unsqueeze(torch.FloatTensor(s),0).to(device)).detach().cpu().numpy()
-            noise[0][0] = max(agent.epsilon, 0) * OU.function(a[0][0], 0.0, 0.60, 0.30)
-            noise[0][1] = max(agent.epsilon, 0) * OU.function(a[0][1], 0.5, 1.00, 0.10)
-            noise[0][2] = max(agent.epsilon, 0) * OU.function(a[0][2], -0.1, 1.00, 0.05)
-
-            if random.random() <= 0.1:
-                print("apply the brake")
-                noise[0][2] = max(agent.epsilon, 0) * OU.function(a[0][2], 0.2, 1.00, 0.10)
-=======
             # Choose Action
             a = agent.actor_eval(torch.unsqueeze(torch.FloatTensor(s),0).to(device)).detach().cpu().numpy()
 
@@ -256,7 +224,6 @@ if __name__ == "__main__":
                     noise[0][2] = max(agent.epsilon, 0) * OU.function(a[0][2], 0.2, 1.00, 0.10)
             else:
                 pass
->>>>>>> 8e04a6df34f07022580d77a30b9ddb53c79768da
 
             a_n[0][0] = a[0][0] + noise[0][0]
             a_n[0][1] = a[0][1] + noise[0][1]
@@ -268,18 +235,11 @@ if __name__ == "__main__":
 
             agent.transition = [s, a_n[0], r, s_, done]
             agent.memory.store(*agent.transition)
-<<<<<<< HEAD
-            agent.learn()
-
-            loss += agent.critic_L
-            total_reward += r
-=======
 
             agent.learn()
 
             loss = agent.critic_L
             score += r
->>>>>>> 8e04a6df34f07022580d77a30b9ddb53c79768da
             s = s_
             print('Episode : {} Step : {}  Action : {} Reward : {} Loss : {}'.format(e, agent.step , a_n, r, loss))
             agent.step += 1
@@ -288,21 +248,18 @@ if __name__ == "__main__":
             agent.step += 1
 
             if done :
-<<<<<<< HEAD
-=======
 
                 scores.append(score)
                 actor_losses.append(agent.actor_L)
                 critic_losses.append(agent.critic_L)
 
->>>>>>> 8e04a6df34f07022580d77a30b9ddb53c79768da
                 param_keys = ['epsilon']
                 param_value = [agent.epsilon]
                 param_dictionary = dict(zip(param_keys,param_value))
 
                 break
 
-        if e == (EPISODE_COUNT - 1):
+        if e == 1999:
             agent._plot(agent.step, scores, actor_losses, critic_losses,)
             np.savetxt("./scores.txt",scores, delimiter=",")
 

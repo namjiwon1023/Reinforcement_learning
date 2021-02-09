@@ -31,11 +31,7 @@ class ReplayBuffer:
         if self.count < self.batch_size:
             index = np.random.choice(self.size, self.count)
         else:
-<<<<<<< HEAD
-            index = np.random.choice(self.size, self.batch_size , replace=False)
-=======
             index = np.random.choice(self.size, self.batch_size, replace = False)
->>>>>>> 8e04a6df34f07022580d77a30b9ddb53c79768da
 
         return dict(obs = self.obs_buf[index],
                     act = self.acts_buf[index],
