@@ -136,11 +136,7 @@ class TorcsEnv:
 
 
 
-<<<<<<< HEAD
         progress = sp*np.cos(obs['angle']) - np.abs(sp*np.sin(obs['angle'])) - sp * np.abs(trackPos) - 0.5 * np.abs(obs['speedZ']) - 0.5 * np.abs(track[0] - track[18])
-=======
-        progress = sp*np.cos(obs['angle']) - np.abs(sp*np.sin(obs['angle'])) - sp * np.abs(obs['trackPos']) - sp * np.abs(track[0] - track[1])
->>>>>>> a4496effdfbfe7ad768981f01b3cbbc4b2bbfb57
         reward = progress
 
         # collision detection
