@@ -9,8 +9,8 @@ class ReplayBuffer:
         self.img_h = 3
         self.img_dim = 3
         self.action_size = 6
-        self.obs_buf = np.zeros([memory_size, self.img_dim, self.img_w, self.img_h], dtype = np.float32)
-        self.next_obs_buf = np.zeros([memory_size, self.img_dim, self.img_w, self.img_h], dtype = np.float32)
+        self.obs_buf = np.zeros([memory_size, self.img_dim, self.img_h, self.img_w], dtype = np.float32)
+        self.next_obs_buf = np.zeros([memory_size, self.img_dim, self.img_h, self.img_w], dtype = np.float32)
         self.acts_buf = np.zeros([memory_size, self.action_size], dtype=np.float32)
         self.rews_buf = np.zeros([memory_size], dtype=np.float32)
         self.done_buf = np.zeros([memory_size], dtype=np.float32)
