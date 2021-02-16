@@ -138,11 +138,11 @@ class Agent:
         action = dist.sample()
 
         # Transform the data
-        probs = T.squeeze(dist.log_prob(action)).item()
+        prob = T.squeeze(dist.log_prob(action)).item()
         action = T.squeeze(action).item()
         value = T.squeeze(value).item()
 
-        return action, probs, value
+        return action, prob, value
 
     def learn(self):
         for _ in range(self.n_epochs):
