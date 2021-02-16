@@ -13,7 +13,7 @@ if __name__ == '__main__':
     n_games = 300
 
     figure_file = '/home/nam/Reinforcement_learning/PPO/plots/cartpole.png'
-
+    print('reward_range[0] : ',env.reward_range[0])
     best_score = env.reward_range[0]
     score_history = []
 
