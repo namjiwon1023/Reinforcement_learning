@@ -84,25 +84,30 @@ class CommunicationEnv:
             index = np.random.choice(len(channel), 3, replace=True)
             phj_index = np.random.choice(len(channel), 1, replace=True)
             channel[phj_index] += self.phj
-        PH = []
+        # PH = []
+        psd = []
         for i in range(len(index)):
             pi = get_Pi()
             hi = get_hi()
             phi = get_phi(pi,hi)
             channel[index[i]] += phi
-            PH.append(phi)
+            # PH.append(phi)
+            psd.append(channel[i])
         ac_t = np.random.choice(len(channel),1,replace=False)
         ac_space.remove(ac_t)
         as_t = np.random.choice(len(ac_space),2,replace=False)
         self.next_ac_range = as_t
 
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        psd_t = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
+        # psd_t = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
+        psd_t = psd[ac_t]
         sinr_t = get_sinr(self.signal, psd_t)
+
         Ic_1 = np.array([[ac_t, sinr_t]])
         Ic_2 = np.array([[as_t[0], f_func(channel[as_t[0]])]])
         Ic_3 = np.array([[as_t[1], f_func(channel[as_t[1]])]])
         Ic_t = np.concatenate((Ic_1, Ic_2, Ic_3), axis=0)
+
         s_t = np.stack((Ic_t, Ic_t, Ic_t), axis=0)
         state = s_t.reshape(1, s_t.shape[0], s_t.shape[1], s_t.shape[2])    # reshape : (batch, dim, w, h)
         self.first_state = state
@@ -124,29 +129,37 @@ class CommunicationEnv:
             index = np.random.choice(len(channel), 3, replace=True)
             phj_index = np.random.choice(len(channel), 1, replace=True)
             channel[phj_index] += self.phj
-        PH = []
+        # PH = []
+        psd = []
         for i in range(len(index)):
             pi = get_Pi()
             hi = get_hi()
             phi = get_phi(pi,hi)
             channel[index[i]] += phi
-            PH.append(phi)
-        ac_t1 = np.random.choice(self.next_ac_range, 1, replace=False)
+            # PH.append(phi)
+            psd.append(channel[i])
+        # ac_t1 = np.random.choice(self.next_ac_range, 1, replace=False)
+        ac_t1 = action
         ac_space.remove(ac_t1)
         as_t1 = np.random.choice(len(ac_space),2,replace=False)
         self.next_ac_range = as_t1
 
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        psd_t1 = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
+        # psd_t1 = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
+        psd_t1 = psd[ac_t1]
         sinr_t1 = get_sinr(self.signal, psd_t1)
+
         Ic_1 = np.array([[ac_t1, sinr_t1]])
         Ic_2 = np.array([[as_t1[0], f_func(channel[as_t1[0]])]])
         Ic_3 = np.array([[as_t1[1], f_func(channel[as_t1[1]])]])
-
         x_t1 = np.concatenate((Ic_1, Ic_2, Ic_3), axis=0)
+
         s_t1 = x_t1.reshape(1, 1, x_t1.shape[0],x_t1.shape[1])
         next_state =  np.append(x_t1, self.first_state[:, :2, :, :], axis=1)
-        done = None
+
+        done = False
         reward = sinr_t1
+        if ac_t1 not in next_ac_range:
+            done = True
 
         return next_state, reward, done
