@@ -4,12 +4,12 @@ import random
 
 class Env():
     def __init__(self):
-        self.P_s = 5
-        self.h_s = 0.8
+        self.Ps = 5
+        self.hs = 0.8
         self.PSD_th = 2
         self.SINR_th = 2
-        self.P_J_j = 8
-        self.h_J_j = 0.7
+        self.Pj = 8
+        self.hj = 0.7
         self.Sigma = 1
         self.Signal = self.P_s * self.h_s
         self.first_state = None
