@@ -19,7 +19,7 @@ from Critic import Critic
 from OU import OU
 from ReplayBuffer import ReplayBuffer
 
-EPISODE_COUNT = 100000
+EPISODE_COUNT = 50000
 MAX_STEPS = 100000
 EXPLORE = 100000.
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -127,8 +127,8 @@ if __name__ == "__main__":
 
     # Setting Neural Network Parameters
     params = {
-                'memory_size' : 1000,
-                'batch_size' : 8,
+                'memory_size' : 10000,
+                'batch_size' : 32,
                 'state_size' : 3,
                 'action_size' : 3,
                 'gamma' : 0.96,
@@ -139,7 +139,6 @@ if __name__ == "__main__":
                 'epsilon' : 1,
                 'load_model' : False,
                 'load_episode' : 0,
-                'step' : 0,
                 'train' : True,
         }
 
@@ -167,6 +166,7 @@ if __name__ == "__main__":
         # s = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY,  ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
         s = ob.img
 
+        step = 0
         score = 0.
         np.savetxt("./Total_scores.txt",scores, delimiter=",")
         np.savetxt("./actor_losses.txt",actor_losses, delimiter=",")
@@ -221,8 +221,8 @@ if __name__ == "__main__":
             score += r
             s = s_
 
-            print('Episode : {} Step : {}  Action : {} Reward : {} Loss : {}'.format(e, agent.step , a_n, r, loss))
-            agent.step += 1
+            print('Episode : {} Step : {}  Action : {} Reward : {} Loss : {}'.format(e, step , a_n, r, loss))
+            step += 1
 
             if done :
 
@@ -238,7 +238,7 @@ if __name__ == "__main__":
 
         print('|============================================================================================|')
         print('|=========================================  Result  =========================================|')
-        print('|                                     Total_Step : {}  '.format(agent.step))
+        print('|                                     Total_Step : {}  '.format(step))
         print('|                      Episode : {} Total_Reward : {} '.format(e, score))
         print('|============================================================================================|')
 
