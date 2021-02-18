@@ -15,6 +15,8 @@ class CommunicationEnv:
         self.signal = self.ps*self.hs
         self.channel_dims = 6
         self.select_as_dims = 2
+        self.next_ac_range = []
+        self.first_state = None
 
     def get_Pi(self):
         Pi = np.random.randint(3,7,1)
@@ -31,30 +33,26 @@ class CommunicationEnv:
     def get_phi(self, pi, hi):
         return np.around(pi*hi, 2)
 
-    def get_psd(self, sigma, ph1, ph2, input_ph3=False, input_phj=False):
+    # Calculation PSD
+    def get_psd(self, sigma, ph1, ph2, ph3=None, phj=None):
         phj, pi3, hi3, ph3, noise = 0, 0, 0, 0, 0
-        if input_phj and input_ph3 is True:
-            phj = self.pj*self.hj
-            pi3 = get_Pi()
-            hi3 = get_hi()
-            ph3 = pi3*hi3
-            psd = sigma + ph1 + ph2 + ph3 + phj
-        elif input_ph3 is True:
-            pi3 = get_Pi()
-            hi3 = get_hi()
-            ph3 = pi3*hi3
+        if phj and ph3 is not None :
+            psd = sigma + ph1 + ph2 + ph3 + self.phj
+        elif ph3 is not None:
             psd = sigma + ph1 + ph2 + ph3
-        elif input_ph3 and input_phj is False:
+        elif ph3 and phj is None:
             psd = sigma + ph1 + ph2
         return psd
 
     def get_noise(self):
         pass
 
+    #  generate channel size : (channel_dims, 1)
     def generate_channel(self):
         channel = np.zeros([self.channel_dims, 1], dtype=np.float)
         return channel
 
+    # PSD Evaluation function
     def f_func(self, psd):
         if psd > self.psd_th:
             Lambda = -10
@@ -62,6 +60,7 @@ class CommunicationEnv:
             Lambda = 10
         return Lambda
 
+    # SINR Evaluation function
     def g_func(self, sinr):
         if sinr > self.sinr_th:
             Lambda = 10
@@ -70,28 +69,84 @@ class CommunicationEnv:
         return 10*Lambda
 
     def reset(self, input_ph3=False, input_phj=False):
+        ac_space = [0,1,2,3,4,5]
         # Add noise and disturbers to the channel
         channel = generate_channel()
         # Add noise(sigma)
         for n in range(len(channel)):
             channel[n] += 1
         # Add case1 : inter 2 signal, case2 : inter 3 signal, case3 : inter 3 jammer 1 signal
-        if input_ph3 is True:
+        if input_ph3 is True:                       # case2
             index = np.random.choice(len(channel), 3, replace=True)
-        elif input_ph3 and input_phj is False:
+        elif input_ph3 and input_phj is False:      # case1
             index = np.random.choice(len(channel), 2, replace=True)
-        elif input_phj is True:
+        elif input_phj is True:                     # case3
             index = np.random.choice(len(channel), 3, replace=True)
             phj_index = np.random.choice(len(channel), 1, replace=True)
             channel[phj_index] += self.phj
-
+        PH = []
         for i in range(len(index)):
             pi = get_Pi()
             hi = get_hi()
             phi = get_phi(pi,hi)
             channel[index[i]] += phi
+            PH.append(phi)
+        ac_t = np.random.choice(len(channel),1,replace=False)
+        ac_space.remove(ac_t)
+        as_t = np.random.choice(len(ac_space),2,replace=False)
+        self.next_ac_range = as_t
 
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        psd_t = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
+        sinr_t = get_sinr(self.signal, psd_t)
+        Ic_1 = np.array([[ac_t, sinr_t]])
+        Ic_2 = np.array([[as_t[0], f_func(channel[as_t[0]])]])
+        Ic_3 = np.array([[as_t[1], f_func(channel[as_t[1]])]])
+        Ic_t = np.concatenate((Ic_1, Ic_2, Ic_3), axis=0)
+        s_t = np.stack((Ic_t, Ic_t, Ic_t), axis=0)
+        state = s_t.reshape(1, s_t.shape[0], s_t.shape[1], s_t.shape[2])    # reshape : (batch, dim, w, h)
+        self.first_state = state
+        return state
 
-    def step(self, action):
-        pass
+    def step(self, action, input_ph3=False, input_phj=False):
+        ac_space = [0,1,2,3,4,5]
+        # Add noise and disturbers to the channel
+        channel = generate_channel()
+        # Add noise(sigma)
+        for n in range(len(channel)):
+            channel[n] += 1
+        # Add case1 : inter 2 signal, case2 : inter 3 signal, case3 : inter 3 jammer 1 signal
+        if input_ph3 is True:                       # case2
+            index = np.random.choice(len(channel), 3, replace=True)
+        elif input_ph3 and input_phj is False:      # case1
+            index = np.random.choice(len(channel), 2, replace=True)
+        elif input_phj is True:                     # case3
+            index = np.random.choice(len(channel), 3, replace=True)
+            phj_index = np.random.choice(len(channel), 1, replace=True)
+            channel[phj_index] += self.phj
+        PH = []
+        for i in range(len(index)):
+            pi = get_Pi()
+            hi = get_hi()
+            phi = get_phi(pi,hi)
+            channel[index[i]] += phi
+            PH.append(phi)
+        ac_t1 = np.random.choice(self.next_ac_range, 1, replace=False)
+        ac_space.remove(ac_t1)
+        as_t1 = np.random.choice(len(ac_space),2,replace=False)
+        self.next_ac_range = as_t1
 
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        psd_t1 = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
+        sinr_t1 = get_sinr(self.signal, psd_t1)
+        Ic_1 = np.array([[ac_t1, sinr_t1]])
+        Ic_2 = np.array([[as_t1[0], f_func(channel[as_t1[0]])]])
+        Ic_3 = np.array([[as_t1[1], f_func(channel[as_t1[1]])]])
+
+        x_t1 = np.concatenate((Ic_1, Ic_2, Ic_3), axis=0)
+        s_t1 = x_t1.reshape(1, 1, x_t1.shape[0],x_t1.shape[1])
+        next_state =  np.append(x_t1, self.first_state[:, :2, :, :], axis=1)
+        done = None
+        reward = sinr_t1
+
+        return next_state, reward, done
