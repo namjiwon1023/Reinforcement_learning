@@ -17,7 +17,6 @@ class ReplayBuffer:
 
         self.max_size, self.batch_size = memory_size, batch_size
         self.ptr, self.size, = 0,0
-        self.count = 0
 
     def store(self, obs, act , rew, next_obs, done):
 
@@ -29,13 +28,9 @@ class ReplayBuffer:
 
         self.ptr = (self.ptr + 1) % self.max_size
         self.size = min(self.size +1, self.max_size)
-        self.count += 1
 
     def sample_batch(self):
-        if self.count < self.batch_size:
-            index = np.random.choice(self.size, self.count)
-        else:
-            index = np.random.choice(self.size, self.batch_size, replace = False)
+        index = np.random.choice(self.size, self.batch_size, replace = False)
 
         return dict(obs = self.obs_buf[index],
                     act = self.acts_buf[index],

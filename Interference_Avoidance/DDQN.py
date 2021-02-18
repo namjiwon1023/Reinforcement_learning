@@ -4,22 +4,22 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 import pickle
+
 from CriticNet import CriticNet
+from ReplayBuffer import ReplayBuffer
+from CommunicationEnv import CommunicationEnv
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-class DDQN(object):
+class DDQNAgent(object):
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-        self.eval_net = Network(self.state_size, self.hidden_size, self.action_size).to(device)
-        self.target_net = Network(self.state_size, self.hidden_size, self.action_size).to(device)
+        self.eval_net = Network(self.input_dims, self.action_size).to(device)
+        self.target_net = Network(self.input_dims, self.action_size).to(device)
         self.target_net.load_state_dict(self.eval_net.state_dict())
         self.target_net.eval()
-
-        self.update_time = update_time
-        self.update_counter = 0
 
         self.memory = ReplayBuffer(self.memory_size, self.batch_size)
         self.transition = list()
@@ -84,26 +84,32 @@ if __name__ == "__main__":
     params = {
                 'memory_size' : 2000,
                 'batch_size' : 5,
-                'state_size' : 3,
+                'input_dims' : 3,
                 'action_size' : 6,
                 'epsilon' : 0.1,
+                'startTime' : 20,
                 'update_time' : 10,
+                'update_counter' : 0,
                 'gamma' : 0.4,
                 'lr' : 0.1,
                 'load_model' : False,
                 'load_episode' : 0,
         }
 
-    agent = DDQN(**params)
+    agent = DDQNAgent(**params)
 
-    env = Env()
+    env = CommunicationEnv()
     critic_losses = []
     scores = []
     Q_Values = []
 
+    n_steps = 0
+    N = 20
+    learn_iters = 0
+
     for e in range(agent.load_episode, 10000):
 
-        s = env.reset()
+        s = env.reset(input_ph3=False, input_phj=False)
         score = 0.
         step = 0
 
@@ -125,14 +131,17 @@ if __name__ == "__main__":
 
             agent.memory.store(*agent.transition)
 
-            agent.learn()
+            if n_steps == agent.startTime:
+                if n_steps % N == 0:
+                    agent.learn()
+                    learn_iters += 1
 
             loss = agent.C_L
             score += r
             s = s_
 
-            print('Episode : {} Step : {}  Action : {} Reward : {} Loss : {}'.format(e, step , a, r, loss))
-            agent.step += 1
+            print('Episode : {} Step : {} learn_iters : {} Action : {} Reward : {} Loss : {}'.format(e, step ,learn_iters ,a, r, loss))
+            n_steps += 1
 
             if done:
 
@@ -143,7 +152,7 @@ if __name__ == "__main__":
 
         print('|============================================================================================|')
         print('|=========================================  Result  =========================================|')
-        print('|                                     Total_Step : {}  '.format(step))
+        print('|                                     Total_Step : {}  '.format(n_steps))
         print('|                      Episode : {} Total_Reward : {} '.format(e, score))
         print('|============================================================================================|')
 
