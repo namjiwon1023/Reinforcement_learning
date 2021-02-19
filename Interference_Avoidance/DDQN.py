@@ -9,15 +9,15 @@ from CriticNet import CriticNet
 from ReplayBuffer import ReplayBuffer
 from CommunicationEnv import CommunicationEnv
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class DDQNAgent(object):
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-        self.eval_net = Network(self.input_dims, self.action_size).to(device)
-        self.target_net = Network(self.input_dims, self.action_size).to(device)
+        self.eval_net = CriticNet(self.input_dims, self.action_size).to(device)
+        self.target_net = CriticNet(self.input_dims, self.action_size).to(device)
         self.target_net.load_state_dict(self.eval_net.state_dict())
         self.target_net.eval()
 
@@ -40,7 +40,7 @@ class DDQNAgent(object):
         if self.epsilon > np.random.random():
             choose_action = np.random.randint(0,self.action_size)
         else :
-            choose_action = self.eval_net(torch.unsqueeze(torch.FloatTensor(state),0).to(device)).argmax()
+            choose_action = self.eval_net(torch.FloatTensor(state),0).to(device).argmax()
             choose_action = choose_action.detach().cpu().numpy()
         self.transition = [state, choose_action]
         return choose_action
