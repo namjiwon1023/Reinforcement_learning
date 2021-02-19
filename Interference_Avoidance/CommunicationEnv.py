@@ -81,6 +81,7 @@ class CommunicationEnv:
 
     def reset(self, input_ph3=False, input_phj=False):
         ac_space = [0,1,2,3,4,5]
+        index = []
         # Add noise and disturbers to the channel
         channel = self.generate_channel()
         # Add noise(sigma)
@@ -107,8 +108,8 @@ class CommunicationEnv:
         ac_t = np.random.choice(len(channel),1,replace=False)
         # ac_space.remove(ac_t)
         as_t = np.random.choice(len(ac_space),2,replace=False)
-        self.next_ac_range = copy.deepcopy(as_t)          # deepcopy : The two are completely independent
-        self.next_ac_range.append(ac_t)
+        as_t_copy = copy.deepcopy(as_t)          # deepcopy : The two are completely independent
+        self.next_ac_range = np.append([[as_t_copy], [ac_t])
 
         # psd_t = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
         psd_t = psd[ac_t]
@@ -126,6 +127,7 @@ class CommunicationEnv:
 
     def step(self, action, input_ph3=False, input_phj=False):
         ac_space = [0,1,2,3,4,5]
+        index = []
         # Add noise and disturbers to the channel
         channel = self.generate_channel()
         # Add noise(sigma)
@@ -153,8 +155,8 @@ class CommunicationEnv:
         ac_t1 = action
         # ac_space.remove(ac_t1)
         as_t1 = np.random.choice(len(ac_space),2,replace=False)
-        self.next_ac_range = copy.deepcopy(as_t1)     # deepcopy : The two are completely independent
-        self.next_ac_range.append(ac_t1)
+        as_t1_copy = copy.deepcopy(as_t1)     # deepcopy : The two are completely independent
+        self.next_ac_range = np.append([as_t1_copy], [ac_t1])
 
         # psd_t1 = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
         psd_t1 = psd[ac_t1]
