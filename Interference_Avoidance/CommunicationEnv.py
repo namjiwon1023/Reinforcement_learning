@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import random
+import copy
 
 class CommunicationEnv:
     def __init__(self):
@@ -18,20 +19,25 @@ class CommunicationEnv:
         self.next_ac_range = []
         self.first_state = None
 
+    # Get the value of PIi
     def get_Pi(self):
         Pi = np.random.randint(3,7,1)
         return Pi
 
+    # Get the value of hIi
     def get_hi(self):
         hi = np.around(np.random.uniform(0.4,0.91),2)
         return hi
 
+    # Get the value of SINR
     def get_sinr(self, signal, noise):
         sinr = signal / noise
         return sinr
 
+    #  Get the value of PIi*hIi
     def get_phi(self, pi, hi):
         return np.around(pi*hi, 2)
+
 
     # Calculation PSD
     def get_psd(self, sigma, ph1, ph2, ph3=None, phj=None):
@@ -44,13 +50,16 @@ class CommunicationEnv:
             psd = sigma + ph1 + ph2
         return psd
 
+
     def get_noise(self):
         pass
+
 
     #  generate channel size : (channel_dims, 1)
     def generate_channel(self):
         channel = np.zeros([self.channel_dims, 1], dtype=np.float)
         return channel
+
 
     # PSD Evaluation function
     def f_func(self, psd):
@@ -60,6 +69,7 @@ class CommunicationEnv:
             Lambda = 10
         return Lambda
 
+
     # SINR Evaluation function
     def g_func(self, sinr):
         if sinr > self.sinr_th:
@@ -67,6 +77,7 @@ class CommunicationEnv:
         else:
             Lambda = -10
         return 10*Lambda
+
 
     def reset(self, input_ph3=False, input_phj=False):
         ac_space = [0,1,2,3,4,5]
@@ -94,16 +105,16 @@ class CommunicationEnv:
             # PH.append(phi)
             psd.append(channel[i])
         ac_t = np.random.choice(len(channel),1,replace=False)
-        ac_space.remove(ac_t)
+        # ac_space.remove(ac_t)
         as_t = np.random.choice(len(ac_space),2,replace=False)
-        self.next_ac_range = as_t
+        self.next_ac_range = copy.deepcopy(as_t)          # deepcopy : The two are completely independent
+        self.next_ac_range.append(ac_t)
 
-        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # psd_t = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
         psd_t = psd[ac_t]
         sinr_t = get_sinr(self.signal, psd_t)
 
-        Ic_1 = np.array([[ac_t, sinr_t]])
+        Ic_1 = np.array([[ac_t, g_func(sinr_t)]])
         Ic_2 = np.array([[as_t[0], f_func(channel[as_t[0]])]])
         Ic_3 = np.array([[as_t[1], f_func(channel[as_t[1]])]])
         Ic_t = np.concatenate((Ic_1, Ic_2, Ic_3), axis=0)
@@ -140,16 +151,16 @@ class CommunicationEnv:
             psd.append(channel[i])
         # ac_t1 = np.random.choice(self.next_ac_range, 1, replace=False)
         ac_t1 = action
-        ac_space.remove(ac_t1)
+        # ac_space.remove(ac_t1)
         as_t1 = np.random.choice(len(ac_space),2,replace=False)
-        self.next_ac_range = as_t1
+        self.next_ac_range = copy.deepcopy(as_t1)     # deepcopy : The two are completely independent
+        self.next_ac_range.append(ac_t1)
 
-        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # psd_t1 = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
         psd_t1 = psd[ac_t1]
         sinr_t1 = get_sinr(self.signal, psd_t1)
 
-        Ic_1 = np.array([[ac_t1, sinr_t1]])
+        Ic_1 = np.array([[ac_t1, g_func(sinr_t1)]])
         Ic_2 = np.array([[as_t1[0], f_func(channel[as_t1[0]])]])
         Ic_3 = np.array([[as_t1[1], f_func(channel[as_t1[1]])]])
         x_t1 = np.concatenate((Ic_1, Ic_2, Ic_3), axis=0)
@@ -157,9 +168,9 @@ class CommunicationEnv:
         s_t1 = x_t1.reshape(1, 1, x_t1.shape[0],x_t1.shape[1])
         next_state =  np.append(x_t1, self.first_state[:, :2, :, :], axis=1)
 
-        done = False
         reward = sinr_t1
-        if ac_t1 not in next_ac_range:
+        done = False
+        if ac_t1 not in self.next_ac_range:
             done = True
 
         return next_state, reward, done
