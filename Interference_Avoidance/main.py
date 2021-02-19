@@ -11,6 +11,7 @@ from utils import plot_learning_curve
 from CriticNet import CriticNet
 from ReplayBuffer import ReplayBuffer
 from CommunicationEnv import CommunicationEnv
+from DDQN import DDQNAgent
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
