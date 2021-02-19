@@ -40,13 +40,13 @@ class ActorCriticCNN_2(nn.Module):
         self.conv1 = nn.Conv2d(input_dims, 16, kernel_size = 8, stride = 4)
         self.conv2 = nn.Conv2d(16, 32, kernel_size = 4, stride = 2)
 
-        self.fc1 = nn.Linear(None, 256)
+        self.fc1 = nn.Linear(None, 256)    # Need to do the calculations yourself
         self.fc2 = nn.Linear(256, n_actions)
 
     def forward(self,s):
         x = F.relu(self.conv1(s))
         x = F.relu(self.conv2(x))
-        x = x.view(-1, None)
+        x = x.view(-1, None)     # Need to do the calculations yourself
 
         x = F.relu(self.fc1(x))
 
@@ -63,14 +63,14 @@ class ActorCriticCNN_3(nn.Module):
         self.conv2 = nn.Conv2d(32, 64, kernel_size = 4, stride = 2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size = 3, stride = 1)
 
-        self.fc1 = nn.Linear(None, 512)
+        self.fc1 = nn.Linear(None, 512)    # Need to do the calculations yourself
         self.fc2 = nn.Linear(512, n_actions)
 
     def forward(self,s):
         x = F.relu(self.conv1(s))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
-        x = x.view(-1, None)
+        x = x.view(-1, None)    # Need to do the calculations yourself
 
         x = F.relu(self.fc1(x))
 
@@ -89,7 +89,7 @@ class ActorCriticCNN_4(nn.Module):
         self.conv3 = nn.Conv2d(16, 32, kernel_size = 3, stride = 2)
         self.conv4 = nn.Conv2d(32, 64, kernel_size = 3, stride = 2)
 
-        self.fc1 = nn.Linear(None, 256)
+        self.fc1 = nn.Linear(None, 256)    # Need to do the calculations yourself
         self.fc2 = nn.Linear(256, n_actions)
 
     def forward(self,s):
@@ -97,7 +97,7 @@ class ActorCriticCNN_4(nn.Module):
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
         x = F.relu(self.conv4(x))
-        x = x.view(-1, None)
+        x = x.view(-1, None)    # Need to do the calculations yourself
 
         x = F.relu(self.fc1(x))
 
