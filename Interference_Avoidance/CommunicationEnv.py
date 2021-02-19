@@ -82,6 +82,21 @@ class CommunicationEnv:
     # def reset(self, input_ph3=False, input_phj=False):
     def reset(self):
         ac_space = [0,1,2,3,4,5]
+        index_t = None
+        channel_t = None
+        ac_t = None
+        as_t = None
+        as_t_copy = None
+        psd_t = None
+        sinr_t = None
+        Ic_1 = None
+        Ic_2 = None
+        Ic_3 = None
+        Ic_t = None
+        s_t = None
+        state = None
+        self.first_state = None
+        self.next_ac_range = []
         # Add noise and disturbers to the channel
         channel_t = self.generate_channel()
         # Add noise(sigma)
@@ -136,6 +151,17 @@ class CommunicationEnv:
         index_t1 = None
         channel_t1 = None
         done = None
+        ac_t1 = None
+        as_t1 = None
+        as_t1_copy = None
+        psd_t1 = None
+        sinr_t1 = None
+        Ic_1 = None
+        Ic_2 = None
+        Ic_3 = None
+        Ic_t1 = None
+        s_t1 = None
+        next_state = None
         # Add noise and disturbers to the channel
         channel_t1 = self.generate_channel()
         # Add noise(sigma)
@@ -182,14 +208,12 @@ class CommunicationEnv:
 
 
         if ac_t1 not in self.next_ac_range:
-            done = True
-        else:
-            done = False
-
-        if done:
             reward = -1
+            done = True
+
         else:
             reward = sinr_t1
+            done = False
 
         self.next_ac_range = np.append([as_t1_copy], [ac_t1])
 

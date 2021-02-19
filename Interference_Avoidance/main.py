@@ -7,6 +7,8 @@ import pickle
 import os
 
 from utils import plot_learning_curve
+from utils1 import plot_learning_curve_1
+
 
 from CriticNet import CriticNet
 from ReplayBuffer import ReplayBuffer
@@ -37,6 +39,7 @@ if __name__ == "__main__":
     chkpt_dir = '/home/nam/Reinforcement_learning/Interference_Avoidance'
     checkpoint_file = os.path.join(chkpt_dir, 'ddqn')
     figure_file = '/home/nam/Reinforcement_learning/Interference_Avoidance/plots/Interference_Avoidance.png'
+    figure_file_1 = '/home/nam/Reinforcement_learning/Interference_Avoidance/plots/Interference_Avoidance_1.png'
     env = CommunicationEnv()
     critic_losses = []
     scores = []
@@ -75,20 +78,18 @@ if __name__ == "__main__":
             agent.transition += [r, s_, done]
 
             agent.memory.store(*agent.transition)
-
+            score += r
+            n_steps += 1
             if n_steps >= agent.startTime:
                 # if n_steps % N == 0:
                 agent.learn()
                 learn_iters += 1
-
-            # loss = agent.C_L
-            score += r
             s = s_
-            n_steps += 1
-
+            # loss = agent.C_L
 
         scores.append(score)
-        avg_score = np.mean(scores[-100:])
+        # avg_score = np.mean(scores[-100:])
+        avg_score = np.mean(scores)
         if avg_score > best_score:
             best_score = avg_score
             torch.save(agent.eval_net.state_dict(), checkpoint_file)
@@ -124,4 +125,6 @@ if __name__ == "__main__":
 
     x = [i+1 for i in range(len(scores))]
     plot_learning_curve(x, scores, figure_file)
+    plot_learning_curve_1(x, scores, figure_file_1)
+
     print('Finish.')
