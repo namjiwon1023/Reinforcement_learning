@@ -109,7 +109,7 @@ class CommunicationEnv:
         # ac_space.remove(ac_t)
         as_t = np.random.choice(len(ac_space),2,replace=False)
         as_t_copy = copy.deepcopy(as_t)          # deepcopy : The two are completely independent
-        self.next_ac_range = np.append([[as_t_copy], [ac_t])
+        self.next_ac_range = np.append([as_t_copy], [ac_t])
 
         # psd_t = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
         psd_t = psd[ac_t]
