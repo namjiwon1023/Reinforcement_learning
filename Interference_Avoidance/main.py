@@ -35,7 +35,7 @@ if __name__ == "__main__":
     agent = DDQNAgent(**params)
 
     chkpt_dir = '/home/nam/Reinforcement_learning/Interference_Avoidance'
-    checkpoint_file = os.path.join(chkpt_dir, 'ddpg')
+    checkpoint_file = os.path.join(chkpt_dir, 'ddqn')
     figure_file = '/home/nam/Reinforcement_learning/Interference_Avoidance/plots/Interference_Avoidance.png'
     env = CommunicationEnv()
     critic_losses = []

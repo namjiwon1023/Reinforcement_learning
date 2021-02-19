@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 import pickle
+import os
 
 from CriticNet import CriticNet
 from ReplayBuffer import ReplayBuffer
@@ -29,18 +30,20 @@ class DDQNAgent(object):
 
         self.C_L = 0.
         self.Q_V = 0.
-
-        self.dirPath = './load_state/DDQN_critic_'
+        self.chkpt_dir = '/home/nam/Reinforcement_learning/Interference_Avoidance'
+        self.checkpoint_file = os.path.join(self.chkpt_dir, 'ddqn')
 
         if self.load_model :
-            self.eval_net.load_state_dict(torch.load(self.dirPath + str(self.load_episode) + '.h5'))
+            self.eval_net.load_state_dict(torch.load(self.checkpoint_file))
 
     def choose_action(self, state):
+
+        s = torch.FloatTensor(state).to(device)
 
         if self.epsilon > np.random.random():
             choose_action = np.random.randint(0,self.action_size)
         else :
-            choose_action = self.eval_net(torch.FloatTensor(state),0).to(device).argmax()
+            choose_action = self.eval_net(s).to(device).argmax()
             choose_action = choose_action.detach().cpu().numpy()
         self.transition = [state, choose_action]
         return choose_action

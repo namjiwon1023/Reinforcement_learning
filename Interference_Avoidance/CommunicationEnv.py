@@ -112,12 +112,14 @@ class CommunicationEnv:
         self.next_ac_range = np.append([as_t_copy], [ac_t])
 
         # psd_t = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
-        psd_t = channel[ac_t]
+        psd_t = channel[ac_t[0]][0]
+
         sinr_t = self.get_sinr(self.signal, psd_t)
 
-        Ic_1 = np.array([[ac_t, self.g_func(sinr_t)]])
-        Ic_2 = np.array([[as_t[0], self.f_func(channel[as_t[0]])]])
-        Ic_3 = np.array([[as_t[1], self.f_func(channel[as_t[1]])]])
+        Ic_1 = np.array([[ac_t[0], self.g_func(sinr_t)]])
+        Ic_2 = np.array([[as_t[0], self.f_func(channel[as_t[0]][0])]])
+        Ic_3 = np.array([[as_t[1], self.f_func(channel[as_t[1]][0])]])
+
         Ic_t = np.concatenate((Ic_1, Ic_2, Ic_3), axis=0)
 
         s_t = np.stack((Ic_t, Ic_t, Ic_t), axis=0)
@@ -159,16 +161,17 @@ class CommunicationEnv:
         self.next_ac_range = np.append([as_t1_copy], [ac_t1])
 
         # psd_t1 = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
-        psd_t1 = channel[ac_t1]
+        psd_t1 = channel[ac_t1][0]
         sinr_t1 = self.get_sinr(self.signal, psd_t1)
 
         Ic_1 = np.array([[ac_t1, self.g_func(sinr_t1)]])
-        Ic_2 = np.array([[as_t1[0], self.f_func(channel[as_t1[0]])]])
-        Ic_3 = np.array([[as_t1[1], self.f_func(channel[as_t1[1]])]])
+        Ic_2 = np.array([[as_t1[0], self.f_func(channel[as_t1[0]][0])]])
+        Ic_3 = np.array([[as_t1[1], self.f_func(channel[as_t1[1]][0])]])
+
         x_t1 = np.concatenate((Ic_1, Ic_2, Ic_3), axis=0)
 
         s_t1 = x_t1.reshape(1, 1, x_t1.shape[0],x_t1.shape[1])
-        next_state =  np.append(x_t1, self.first_state[:, :2, :, :], axis=1)
+        next_state =  np.append(s_t1, self.first_state[:, :2, :, :], axis=1)
 
         reward = sinr_t1
         done = False
