@@ -53,7 +53,7 @@ if __name__ == "__main__":
         s = env.reset(input_ph3=False, input_phj=False)
         score = 0.
         step = 0
-
+        done = False
         np.savetxt("./Total_reward.txt",scores, delimiter=",")
         np.savetxt("./critic_loss.txt",critic_losses, delimiter=",")
         np.savetxt("./Q_value.txt",Q_Values, delimiter=",")
