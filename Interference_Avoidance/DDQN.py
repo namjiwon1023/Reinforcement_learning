@@ -62,101 +62,22 @@ class DDQNAgent(object):
 
         state = torch.FloatTensor(samples['obs']).to(device)
         next_state = torch.FloatTensor(samples['next_obs']).to(device)
-        action = torch.LongTensor(samples['act']).reshape(-1,6).to(device)
+        action = torch.LongTensor(samples['act']).reshape(-1,1).to(device)
         reward = torch.FloatTensor(samples['rew']).reshape(-1,1).to(device)
         done = torch.FloatTensor(samples['done']).reshape(-1,1).to(device)
 
         curr_q = self.eval_net(state).gather(1, action)
+        # print('curr_q : ',curr_q)
         self.Q_V = curr_q.detach().cpu().numpy()
         next_q = self.target_net(next_state).gather(1, self.eval_net(next_state).argmax(dim = 1, keepdim = True)).detach()
-
+        # print('next_q : ',next_q)
         mask = 1 - done
 
         target_q = (reward + self.gamma * next_q * mask).to(device)
-
-        loss = self.loss(curr_q, target_q)
+        # print('target_q : ',target_q)
+        loss = self.loss(curr_q, target_q).to(device)
         self.C_L = loss.detach().cpu().numpy()
 
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-
-
-if __name__ == "__main__":
-
-    params = {
-                'memory_size' : 2000,
-                'batch_size' : 5,
-                'input_dims' : 3,
-                'action_size' : 6,
-                'epsilon' : 0.1,
-                'startTime' : 20,
-                'update_time' : 10,
-                'update_counter' : 0,
-                'gamma' : 0.4,
-                'lr' : 0.1,
-                'load_model' : False,
-                'load_episode' : 0,
-        }
-
-    agent = DDQNAgent(**params)
-
-    env = CommunicationEnv()
-    critic_losses = []
-    scores = []
-    Q_Values = []
-
-    n_steps = 0
-    N = 20
-    learn_iters = 0
-
-    for e in range(agent.load_episode, 10000):
-
-        s = env.reset(input_ph3=False, input_phj=False)
-        score = 0.
-        step = 0
-
-        np.savetxt("./Total_reward.txt",scores, delimiter=",")
-        np.savetxt("./critic_loss.txt",critic_losses, delimiter=",")
-        np.savetxt("./Q_value.txt",Q_Value, delimiter=",")
-
-        if e % 10 == 0 :
-            torch.save(agent.eval_net.state_dict(), agent.dirPath + str(e) + '.h5')
-
-        for t in range(6000):
-        # while not done:
-
-            a = agent.choose_action(s)
-
-            s_, r, done = env.step(a)
-
-            agent.transition += [r, s_, done]
-
-            agent.memory.store(*agent.transition)
-
-            if n_steps == agent.startTime:
-                if n_steps % N == 0:
-                    agent.learn()
-                    learn_iters += 1
-
-            loss = agent.C_L
-            score += r
-            s = s_
-
-            print('Episode : {} Step : {} learn_iters : {} Action : {} Reward : {} Loss : {}'.format(e, step ,learn_iters ,a, r, loss))
-            n_steps += 1
-
-            if done:
-
-                scores.append(score)
-                Q_Values.append(agent.Q_V)
-                critic_losses.append(agent.C_L)
-                break
-
-        print('|============================================================================================|')
-        print('|=========================================  Result  =========================================|')
-        print('|                                     Total_Step : {}  '.format(n_steps))
-        print('|                      Episode : {} Total_Reward : {} '.format(e, score))
-        print('|============================================================================================|')
-
-    print('Finish.')

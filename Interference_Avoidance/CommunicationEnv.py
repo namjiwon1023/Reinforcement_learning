@@ -168,9 +168,9 @@ class CommunicationEnv:
         Ic_2 = np.array([[as_t1[0], self.f_func(channel[as_t1[0]][0])]])
         Ic_3 = np.array([[as_t1[1], self.f_func(channel[as_t1[1]][0])]])
 
-        x_t1 = np.concatenate((Ic_1, Ic_2, Ic_3), axis=0)
+        Ic_t1 = np.concatenate((Ic_1, Ic_2, Ic_3), axis=0)
 
-        s_t1 = x_t1.reshape(1, 1, x_t1.shape[0],x_t1.shape[1])
+        s_t1 = Ic_t1.reshape(1, 1, Ic_t1.shape[0], Ic_t1.shape[1])
         next_state =  np.append(s_t1, self.first_state[:, :2, :, :], axis=1)
 
         reward = sinr_t1

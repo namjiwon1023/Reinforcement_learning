@@ -81,12 +81,12 @@ if __name__ == "__main__":
             score += r
             s = s_
             n_steps += 1
+            # print('Episode : {} Step : {} learn_iters : {} Action : {} Reward : {} Loss : {}'.format(e, n_steps ,learn_iters ,a, r, loss))
 
         scores.append(score)
         Q_Values.append(agent.Q_V)
         critic_losses.append(agent.C_L)
         avg_score = np.mean(scores[-100:])
-        print('Episode : {} Step : {} learn_iters : {} Action : {} Reward : {} Loss : {}'.format(e, n_steps ,learn_iters ,a, r, loss))
 
         if avg_score > best_score:
             best_score = avg_score
@@ -94,11 +94,11 @@ if __name__ == "__main__":
 
 
 
-        # print('|============================================================================================|')
-        # print('|=========================================  Result  =========================================|')
-        # print('|                                     Total_Step : {}  '.format(n_steps))
-        # print('|                      Episode : {} Total_Reward : {} '.format(e, score))
-        # print('|============================================================================================|')
+        print('|============================================================================================|')
+        print('|=========================================  Result  =========================================|')
+        print('|                                     Total_Step : {}  '.format(n_steps))
+        print('|                      Episode : {} Total_Reward : {} '.format(e, score))
+        print('|============================================================================================|')
 
     x = [i+1 for i in range(len(scores))]
     plot_learning_curve(x, scores, figure_file)
