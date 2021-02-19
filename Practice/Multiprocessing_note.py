@@ -10,7 +10,7 @@ def job(q):
     q.put(res)    # 将 需要获得的值 放进queue的队列中 相当于正常情况下的return
 
 def multicore_pool():
-    pool = mp.Pool()     # 函数定义参数（processes=自己定义的进程数）默认是使用全部的核数的 
+    pool = mp.Pool()     # 函数定义参数（processes=自己定义的进程数）默认是使用全部的核数的
     res1 = pool.map(job,range(10))  # 运行的函数 ， 运算的值 ， 可以在定义中使用return
     print(res1)
     res1 = pool.apply_async(job,(2,))   # 输入的数值是可以迭代的所以要添加‘，’ 这个函数 一次只能在一个进程中运行
