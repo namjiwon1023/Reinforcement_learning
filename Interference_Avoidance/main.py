@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
         np.savetxt("./Total_reward.txt",scores, delimiter=",")
         np.savetxt("./critic_loss.txt",critic_losses, delimiter=",")
-        np.savetxt("./Q_value.txt",Q_Value, delimiter=",")
+        np.savetxt("./Q_value.txt",Q_Values, delimiter=",")
 
         # if e % 10 == 0 :
         #     torch.save(agent.eval_net.state_dict(), agent.dirPath + str(e) + '.h5')

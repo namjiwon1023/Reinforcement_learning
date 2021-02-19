@@ -97,14 +97,14 @@ class CommunicationEnv:
             phj_index = np.random.choice(len(channel), 1, replace=True)
             channel[phj_index] += self.phj
         # PH = []
-        psd = []
+        # psd = []
         for i in range(len(index)):
             pi = self.get_Pi()
             hi = self.get_hi()
             phi = self.get_phi(pi,hi)
             channel[index[i]] += phi
             # PH.append(phi)
-            psd.append(channel[i])
+            # psd.append(channel[i])
         ac_t = np.random.choice(len(channel),1,replace=False)
         # ac_space.remove(ac_t)
         as_t = np.random.choice(len(ac_space),2,replace=False)
@@ -112,7 +112,7 @@ class CommunicationEnv:
         self.next_ac_range = np.append([as_t_copy], [ac_t])
 
         # psd_t = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
-        psd_t = psd[ac_t]
+        psd_t = channel[ac_t]
         sinr_t = self.get_sinr(self.signal, psd_t)
 
         Ic_1 = np.array([[ac_t, self.g_func(sinr_t)]])
@@ -143,14 +143,14 @@ class CommunicationEnv:
             phj_index = np.random.choice(len(channel), 1, replace=True)
             channel[phj_index] += self.phj
         # PH = []
-        psd = []
+        # psd = []
         for i in range(len(index)):
             pi = self.get_Pi()
             hi = self.get_hi()
             phi = self.get_phi(pi,hi)
             channel[index[i]] += phi
             # PH.append(phi)
-            psd.append(channel[i])
+            # psd.append(channel[i])
         # ac_t1 = np.random.choice(self.next_ac_range, 1, replace=False)
         ac_t1 = action
         # ac_space.remove(ac_t1)
@@ -159,7 +159,7 @@ class CommunicationEnv:
         self.next_ac_range = np.append([as_t1_copy], [ac_t1])
 
         # psd_t1 = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
-        psd_t1 = psd[ac_t1]
+        psd_t1 = channel[ac_t1]
         sinr_t1 = self.get_sinr(self.signal, psd_t1)
 
         Ic_1 = np.array([[ac_t1, self.g_func(sinr_t1)]])
