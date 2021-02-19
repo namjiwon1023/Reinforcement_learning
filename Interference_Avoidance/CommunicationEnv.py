@@ -79,78 +79,85 @@ class CommunicationEnv:
         return 10*Lambda
 
 
-    def reset(self, input_ph3=False, input_phj=False):
+    # def reset(self, input_ph3=False, input_phj=False):
+    def reset(self):
         ac_space = [0,1,2,3,4,5]
-        index = []
         # Add noise and disturbers to the channel
-        channel = self.generate_channel()
+        channel_t = self.generate_channel()
         # Add noise(sigma)
-        for n in range(len(channel)):
-            channel[n] += 1
+        for n in range(len(channel_t)):
+            channel_t[n] += 1
         # Add case1 : inter 2 signal, case2 : inter 3 signal, case3 : inter 3 jammer 1 signal
-        if input_ph3 is True:                       # case2
-            index = np.random.choice(len(channel), 3, replace=True)
-        elif input_ph3 and input_phj is False:      # case1
-            index = np.random.choice(len(channel), 2, replace=True)
-        elif input_phj is True:                     # case3
-            index = np.random.choice(len(channel), 3, replace=True)
-            phj_index = np.random.choice(len(channel), 1, replace=True)
-            channel[phj_index] += self.phj
+        # if input_ph3 is True:                       # case2
+        #     index = np.random.choice(len(channel_t), 3, replace=True)
+        # elif input_ph3 and input_phj is False:      # case1
+        #     index = np.random.choice(len(channel_t), 2, replace=True)
+        # elif input_phj is True:                     # case3
+        #     index = np.random.choice(len(channel_t), 3, replace=True)
+        #     phj_index = np.random.choice(len(channel_t), 1, replace=True)
+        #     channel_t[phj_index] += self.phj
+
+        index_t = np.random.choice(len(channel_t), 2, replace=True)
         # PH = []
         # psd = []
-        for i in range(len(index)):
+        for i in range(len(index_t)):
             pi = self.get_Pi()
             hi = self.get_hi()
             phi = self.get_phi(pi,hi)
-            channel[index[i]] += phi
+            channel_t[index_t[i]] += phi
             # PH.append(phi)
             # psd.append(channel[i])
-        ac_t = np.random.choice(len(channel),1,replace=False)
+        ac_t = np.random.choice(len(channel_t),1,replace=False)
         # ac_space.remove(ac_t)
         as_t = np.random.choice(len(ac_space),2,replace=False)
         as_t_copy = copy.deepcopy(as_t)          # deepcopy : The two are completely independent
-        self.next_ac_range = np.append([as_t_copy], [ac_t])
+        # self.next_ac_range = np.append([as_t_copy], [ac_t])
 
         # psd_t = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
-        psd_t = channel[ac_t[0]][0]
+        psd_t = channel_t[ac_t[0]][0]
 
         sinr_t = self.get_sinr(self.signal, psd_t)
 
         Ic_1 = np.array([[ac_t[0], self.g_func(sinr_t)]])
-        Ic_2 = np.array([[as_t[0], self.f_func(channel[as_t[0]][0])]])
-        Ic_3 = np.array([[as_t[1], self.f_func(channel[as_t[1]][0])]])
+        Ic_2 = np.array([[as_t[0], self.f_func(channel_t[as_t[0]][0])]])
+        Ic_3 = np.array([[as_t[1], self.f_func(channel_t[as_t[1]][0])]])
 
         Ic_t = np.concatenate((Ic_1, Ic_2, Ic_3), axis=0)
 
         s_t = np.stack((Ic_t, Ic_t, Ic_t), axis=0)
         state = s_t.reshape(1, s_t.shape[0], s_t.shape[1], s_t.shape[2])    # reshape : (batch, dim, w, h)
         self.first_state = state
+        self.next_ac_range = np.append([as_t_copy], [ac_t])
         return state
 
-    def step(self, action, input_ph3=False, input_phj=False):
+    # def step(self, action, input_ph3=False, input_phj=False):
+    def step(self, action):
         ac_space = [0,1,2,3,4,5]
-        index = []
+        index_t1 = None
+        channel_t1 = None
+        done = None
         # Add noise and disturbers to the channel
-        channel = self.generate_channel()
+        channel_t1 = self.generate_channel()
         # Add noise(sigma)
-        for n in range(len(channel)):
-            channel[n] += 1
+        for n in range(len(channel_t1)):
+            channel_t1[n] += 1
         # Add case1 : inter 2 signal, case2 : inter 3 signal, case3 : inter 3 jammer 1 signal
-        if input_ph3 is True:                       # case2
-            index = np.random.choice(len(channel), 3, replace=True)
-        elif input_ph3 and input_phj is False:      # case1
-            index = np.random.choice(len(channel), 2, replace=True)
-        elif input_phj is True:                     # case3
-            index = np.random.choice(len(channel), 3, replace=True)
-            phj_index = np.random.choice(len(channel), 1, replace=True)
-            channel[phj_index] += self.phj
+        # if input_ph3 is True:                       # case2
+        #     index = np.random.choice(len(channel_t1), 3, replace=True)
+        # elif input_ph3 and input_phj is False:      # case1
+        #     index = np.random.choice(len(channel_t1), 2, replace=True)
+        # elif input_phj is True:                     # case3
+        #     index = np.random.choice(len(channel_t1), 3, replace=True)
+        #     phj_index = np.random.choice(len(channel_t1), 1, replace=True)
+        #     channel_t1[phj_index] += self.phj
+        index_t1 = np.random.choice(len(channel_t1), 2, replace=True)
         # PH = []
         # psd = []
-        for i in range(len(index)):
+        for i in range(len(index_t1)):
             pi = self.get_Pi()
             hi = self.get_hi()
             phi = self.get_phi(pi,hi)
-            channel[index[i]] += phi
+            channel_t1[index_t1[i]] += phi
             # PH.append(phi)
             # psd.append(channel[i])
         # ac_t1 = np.random.choice(self.next_ac_range, 1, replace=False)
@@ -158,22 +165,22 @@ class CommunicationEnv:
         # ac_space.remove(ac_t1)
         as_t1 = np.random.choice(len(ac_space),2,replace=False)
         as_t1_copy = copy.deepcopy(as_t1)     # deepcopy : The two are completely independent
-        self.next_ac_range = np.append([as_t1_copy], [ac_t1])
+        # self.next_ac_range = np.append([as_t1_copy], [ac_t1])
 
         # psd_t1 = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
-        psd_t1 = channel[ac_t1][0]
+        psd_t1 = channel_t1[ac_t1][0]
         sinr_t1 = self.get_sinr(self.signal, psd_t1)
 
         Ic_1 = np.array([[ac_t1, self.g_func(sinr_t1)]])
-        Ic_2 = np.array([[as_t1[0], self.f_func(channel[as_t1[0]][0])]])
-        Ic_3 = np.array([[as_t1[1], self.f_func(channel[as_t1[1]][0])]])
+        Ic_2 = np.array([[as_t1[0], self.f_func(channel_t1[as_t1[0]][0])]])
+        Ic_3 = np.array([[as_t1[1], self.f_func(channel_t1[as_t1[1]][0])]])
 
         Ic_t1 = np.concatenate((Ic_1, Ic_2, Ic_3), axis=0)
 
         s_t1 = Ic_t1.reshape(1, 1, Ic_t1.shape[0], Ic_t1.shape[1])
         next_state =  np.append(s_t1, self.first_state[:, :2, :, :], axis=1)
 
-        done = None
+
         if ac_t1 not in self.next_ac_range:
             done = True
         else:
@@ -183,5 +190,7 @@ class CommunicationEnv:
             reward = -1
         else:
             reward = sinr_t1
+
+        self.next_ac_range = np.append([as_t1_copy], [ac_t1])
 
         return next_state, reward, done
