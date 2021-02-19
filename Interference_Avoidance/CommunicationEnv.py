@@ -173,9 +173,10 @@ class CommunicationEnv:
         s_t1 = Ic_t1.reshape(1, 1, Ic_t1.shape[0], Ic_t1.shape[1])
         next_state =  np.append(s_t1, self.first_state[:, :2, :, :], axis=1)
 
-        reward = sinr_t1
-        done = False
         if ac_t1 not in self.next_ac_range:
+            reward = -1
             done = True
+        else:
+            reward = sinr_t1
 
         return next_state, reward, done
