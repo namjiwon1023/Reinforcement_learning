@@ -82,7 +82,7 @@ class CommunicationEnv:
     def reset(self, input_ph3=False, input_phj=False):
         ac_space = [0,1,2,3,4,5]
         # Add noise and disturbers to the channel
-        channel = generate_channel()
+        channel = self.generate_channel()
         # Add noise(sigma)
         for n in range(len(channel)):
             channel[n] += 1
@@ -98,9 +98,9 @@ class CommunicationEnv:
         # PH = []
         psd = []
         for i in range(len(index)):
-            pi = get_Pi()
-            hi = get_hi()
-            phi = get_phi(pi,hi)
+            pi = self.get_Pi()
+            hi = self.get_hi()
+            phi = self.get_phi(pi,hi)
             channel[index[i]] += phi
             # PH.append(phi)
             psd.append(channel[i])
@@ -112,11 +112,11 @@ class CommunicationEnv:
 
         # psd_t = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
         psd_t = psd[ac_t]
-        sinr_t = get_sinr(self.signal, psd_t)
+        sinr_t = self.get_sinr(self.signal, psd_t)
 
-        Ic_1 = np.array([[ac_t, g_func(sinr_t)]])
-        Ic_2 = np.array([[as_t[0], f_func(channel[as_t[0]])]])
-        Ic_3 = np.array([[as_t[1], f_func(channel[as_t[1]])]])
+        Ic_1 = np.array([[ac_t, self.g_func(sinr_t)]])
+        Ic_2 = np.array([[as_t[0], self.f_func(channel[as_t[0]])]])
+        Ic_3 = np.array([[as_t[1], self.f_func(channel[as_t[1]])]])
         Ic_t = np.concatenate((Ic_1, Ic_2, Ic_3), axis=0)
 
         s_t = np.stack((Ic_t, Ic_t, Ic_t), axis=0)
@@ -127,7 +127,7 @@ class CommunicationEnv:
     def step(self, action, input_ph3=False, input_phj=False):
         ac_space = [0,1,2,3,4,5]
         # Add noise and disturbers to the channel
-        channel = generate_channel()
+        channel = self.generate_channel()
         # Add noise(sigma)
         for n in range(len(channel)):
             channel[n] += 1
@@ -143,9 +143,9 @@ class CommunicationEnv:
         # PH = []
         psd = []
         for i in range(len(index)):
-            pi = get_Pi()
-            hi = get_hi()
-            phi = get_phi(pi,hi)
+            pi = self.get_Pi()
+            hi = self.get_hi()
+            phi = self.get_phi(pi,hi)
             channel[index[i]] += phi
             # PH.append(phi)
             psd.append(channel[i])
@@ -158,11 +158,11 @@ class CommunicationEnv:
 
         # psd_t1 = get_psd(sigma=self.sigma, ph1=PH[1], ph2=PH[2], ph3=None, phj=None)
         psd_t1 = psd[ac_t1]
-        sinr_t1 = get_sinr(self.signal, psd_t1)
+        sinr_t1 = self.get_sinr(self.signal, psd_t1)
 
-        Ic_1 = np.array([[ac_t1, g_func(sinr_t1)]])
-        Ic_2 = np.array([[as_t1[0], f_func(channel[as_t1[0]])]])
-        Ic_3 = np.array([[as_t1[1], f_func(channel[as_t1[1]])]])
+        Ic_1 = np.array([[ac_t1, self.g_func(sinr_t1)]])
+        Ic_2 = np.array([[as_t1[0], self.f_func(channel[as_t1[0]])]])
+        Ic_3 = np.array([[as_t1[1], self.f_func(channel[as_t1[1]])]])
         x_t1 = np.concatenate((Ic_1, Ic_2, Ic_3), axis=0)
 
         s_t1 = x_t1.reshape(1, 1, x_t1.shape[0],x_t1.shape[1])
