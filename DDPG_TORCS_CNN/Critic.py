@@ -11,7 +11,7 @@ class Critic(nn.Module):
 
         self.conv3 = nn.Conv2d(64, 64, kernel_size = 3, stride = 1)
 
-        self.state = nn.Linear(64*5*5, 512)
+        self.state = nn.Linear(64*4*4, 512)
 
         self.action = nn.Linear(action_size, 512)
 
@@ -22,7 +22,7 @@ class Critic(nn.Module):
         x = F.relu(self.conv1(state))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
-        x = x.view(-1, 64*5*5)
+        x = x.view(-1, 64*4*4)
 
         state_v = F.relu(self.state(x))
         action_v = F.relu(self.action(action))

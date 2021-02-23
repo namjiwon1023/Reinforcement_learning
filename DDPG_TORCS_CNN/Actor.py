@@ -11,7 +11,7 @@ class Actor(nn.Module):
 
         self.conv3 = nn.Conv2d(64, 64, kernel_size = 3, stride = 1)
 
-        self.fc1 = nn.Linear(64*5*5, 512)
+        self.fc1 = nn.Linear(64*4*4, 512)
 
         self.steering = nn.Linear(512, 1)
         self.steering.weight.data.normal_(0,1e-4)
@@ -26,7 +26,7 @@ class Actor(nn.Module):
         x = F.relu(self.conv1(s))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
-        x = x.view(-1, 64*5*5)
+        x = x.view(-1, 64*4*4)
 
         x = F.relu(self.fc1(x))
 
