@@ -26,11 +26,11 @@ class DDQNAgent(object):
         self.transition = list()
 
         self.optimizer = optim.SGD(self.eval_net.parameters(),lr=self.lr)
-        self.loss = nn.MSELoss()
+        # self.loss = nn.MSELoss()
 
         self.C_L = 0.
         self.Q_V = 0.
-        self.chkpt_dir = '/home/nam/Reinforcement_learning/Interference_Avoidance'
+        self.chkpt_dir = '/home/njw/Downloads/Interference_Avoidance'
         self.checkpoint_file = os.path.join(self.chkpt_dir, 'ddqn')
 
         if self.load_model :
@@ -40,7 +40,7 @@ class DDQNAgent(object):
 
         s = torch.FloatTensor(state).to(device)
 
-        if self.epsilon > np.random.random():
+        if self.epsilon >= np.random.random():
             choose_action = np.random.randint(0,self.action_size)
         else :
             choose_action = self.eval_net(s).to(device).argmax()
@@ -75,7 +75,10 @@ class DDQNAgent(object):
 
         target_q = (reward + self.gamma * next_q * mask).to(device)
         # print('target_q : ',target_q)
-        loss = self.loss(curr_q, target_q).to(device)
+        # loss = self.loss(curr_q, target_q).to(device)
+        loss = (target_q - curr_q)**2
+        loss = loss.mean()
+        
         self.C_L = loss.detach().cpu().numpy()
 
         self.optimizer.zero_grad()
