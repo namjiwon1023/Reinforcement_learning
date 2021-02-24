@@ -10,10 +10,10 @@ from utils import plot_learning_curve
 
 
 
-from CriticNet import CriticNet
+from DuelingCriticNet import DuelingCriticNet
 from ReplayBuffer import ReplayBuffer
 from CommunicationEnv import CommunicationEnv
-from DDQN import DDQNAgent
+from D3QN import D3QNAgent
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -34,12 +34,11 @@ if __name__ == "__main__":
                 'load_episode' : 0,
         }
 
-    agent = DDQNAgent(**params)
+    agent = D3QNAgent(**params)
 
-    chkpt_dir = '/home/njw/Downloads/Interference_Avoidance'
+    chkpt_dir = '/home/nam/Reinforcement_learning/Intelligent_selection_of_communication_channels'
     checkpoint_file = os.path.join(chkpt_dir, 'ddqn')
-    figure_file = '/home/njw/Downloads/Interference_Avoidance/plots/Interference_Avoidance.png'
-    figure_file_1 = '/home/njw/Downloads/Interference_Avoidance/plots/Interference_Avoidance_1.png'
+    figure_file = '/home/nam/Reinforcement_learning/Intelligent_selection_of_communication_channels/plots/D3QN_Interference_Avoidance.png'
     env = CommunicationEnv()
     critic_losses = []
     scores = []
@@ -62,8 +61,8 @@ if __name__ == "__main__":
         done = False
         avg_R = 0.
 
-        np.savetxt("./Total_reward.txt",scores, delimiter=",")
-        np.savetxt("./avg_reward.txt",avg_scores, delimiter=",")
+        np.savetxt("./Total_reward_D3QN.txt",scores, delimiter=",")
+        np.savetxt("./avg_reward_D3QN.txt",avg_scores, delimiter=",")
         # np.savetxt("./critic_loss.txt",critic_losses, delimiter=",")
         # np.savetxt("./Q_value.txt",Q_Values, delimiter=",")
 
