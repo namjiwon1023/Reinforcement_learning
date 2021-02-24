@@ -12,7 +12,7 @@ from utils import plot_learning_curve
 
 from CriticNet import CriticNet
 from ReplayBuffer import ReplayBuffer
-from CommunicationEnv import CommunicationEnv
+from CommunicationEnv_case3 import CommunicationEnv_case3
 from DQN import DQNAgent
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     chkpt_dir = '/home/nam/Reinforcement_learning/Intelligent_selection_of_communication_channels'
     checkpoint_file = os.path.join(chkpt_dir, 'DQN')
     figure_file = '/home/nam/Reinforcement_learning/Intelligent_selection_of_communication_channels/plots/Interference_Avoidance.png'
-    env = CommunicationEnv()
+    env = CommunicationEnv_case3()
     critic_losses = []
     scores = []
     Q_Values = []
