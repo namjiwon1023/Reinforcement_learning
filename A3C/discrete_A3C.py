@@ -50,7 +50,7 @@ class Net(nn.Module):
         logits, values = self.forward(s)
         td = v_t - values
         c_loss = td.pow(2)
-        
+
         probs = F.softmax(logits, dim=1)
         m = self.distribution(probs)
         exp_v = m.log_prob(a) * td.detach().squeeze()
