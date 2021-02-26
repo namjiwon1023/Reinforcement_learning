@@ -1,0 +1,23 @@
+#!usr/bin/python
+#-*- coding:utf-8 -*-
+
+''' 共享优化器， 优化器中的参数将在多处理器中共享 '''
+
+import torch as T
+
+class SharedAdam(T.optim.Adam):
+    def __init__(self, params, lr=1e-3, betas=(0.9, 0.99), eps=1e-8, weight_decay=0):
+        super(SharedAdam, self).__init__(params, lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
+        # State initialization
+        # 状态初始化
+        for group in self.param_groups:
+            for p in group['params']:
+                state = self.state[p]
+                state['step'] = 0
+                state['exp_avg'] = T.zeros_like(p.data)
+                state['exp_avg_sq'] = T.zeros_like(p.data)
+
+                # share in memory
+                # 共享内存
+                state['exp_avg'].share_memory_()
+                state['exp_avg_sq'].share_memory_()
