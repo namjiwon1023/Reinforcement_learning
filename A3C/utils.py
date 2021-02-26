@@ -44,7 +44,7 @@ def push_and_pull(opt, lnet, gnet, done, s_, bs, ba, br, gamma):             # �
 
     # pull global parameters
     # 获取全局参数
-    lnet.load_state_dict(gent.state_dict())
+    lnet.load_state_dict(gnet.state_dict())
 
 def record(global_ep, global_ep_r, ep_r, res_queue, name):
     with global_ep.get_lock():                                                    # 多线程共享数据， 默认共享对象内部的关联锁是递归锁（默认），使用 with counter.get_lock():
