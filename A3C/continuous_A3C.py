@@ -31,7 +31,7 @@ class Net(nn.Module):
         self.sigma = nn.Linear(200, a_dim)
         self.c1 = nn.Linear(s_dim, 100)
         self.v = nn.Linear(100, 1)
-        set_init([self,a1, self.mu, self.sigma, self.c1, self.v])
+        set_init([self.a1, self.mu, self.sigma, self.c1, self.v])
         self.distribution = T.distributions.Normal
 
     def forward(self, x):
