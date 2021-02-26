@@ -67,7 +67,7 @@ class Worker(mp.Process):
         super(Worker, self).__init__()
         self.name = 'w%i' % name
         self.g_ep, self.g_ep_r, self.res_queue = global_ep, global_ep_r, res_queue
-        self.gnet, self.opt = gent, opt
+        self.gnet, self.opt = gnet, opt
         self.lnet = Net(N_S, N_A)    # local network
         self.env = gym.make('Pendulum-v0').unwrapped
 
@@ -91,7 +91,7 @@ class Worker(mp.Process):
 
                 if total_step % UPDATE_GLOBAL_ITER == 0 or done:    # update global and assign to local net
                     # sync 同步
-                    push_and_pull(self.opt, self.lnet, self.gent, done, s_, buffer_s, buffer_a, buffer_r, GAMMA)
+                    push_and_pull(self.opt, self.lnet, self.gnet, done, s_, buffer_s, buffer_a, buffer_r, GAMMA)
                     buffer_s, buffer_a, buffer_r = [], [], []
 
                     if done:    # done and print information 完成并打印信息
