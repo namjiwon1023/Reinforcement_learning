@@ -25,7 +25,7 @@ def push_and_pull(opt, lnet, gnet, done, s_, bs, ba, br, gamma):             # �
     buffer_v_target = []                   # critic更新时的 target_v的值， 计算公式： target_V = r + gamma*target(V(s'))
 
     for r in br[::-1]:             # 进行反向排序
-        v_s_ = r + gamma*v_s_      # 这个地方 不应该是 V(s) 或者是 Q(s,a)吗？？
+        v_s_ = r + gamma*v_s_      # 这个地方 不应该是 V(s) 吗？？
         buffer_v_target.append(v_s_)
     buffer_v_target.reverse()
 
