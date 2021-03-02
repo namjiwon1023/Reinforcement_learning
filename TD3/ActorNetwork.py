@@ -23,8 +23,8 @@ class ActorNetwork(nn.Module):
 
     def forward(self, state):
         action = self.fc1(state)
-        out = torch.tanh(action)
-        return 2 * action
+        out = T.tanh(action)
+        return action
 
     def save_models(self):
         T.save(self.state_dict(), self.dirPath)

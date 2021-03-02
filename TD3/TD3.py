@@ -11,6 +11,7 @@ from ActorNetwork import ActorNetwork
 from CriticNetwork import CriticNetwork
 from GaussianNoise import GaussianNoise
 
+
 def _layer_norm(layer, std=1.0, bias_const=1e-6):
     if type(layer) == nn.Linear:
         T.nn.init.orthogonal_(layer.weight, std)
@@ -27,12 +28,22 @@ class TD3Agent(object):
         self.critic_eval = CriticNetwork(self.n_states, self.n_actions, self.lr)
         self.critic_target = copy.deepcopy(self.critic_eval)
 
-        self.memory = ReplayBuffer(self.memory_size, self.n_states, self.n_actions)
+        self.memory = ReplayBuffer(self.memory_size, self.n_states)
         self.transition = list()
 
-    def choose_action(self, state):
+        self.exploration_noise = GaussianNoise(self.n_actions, self.exploration_noise, self.exploration_noise)
+        self.target_policy_noise = GaussianNoise(self.n_actions, self.policy_noise, self.policy_noise)
+
+
+    def choose_action(self, state, n_actions):
         s = T.unsqueeze(T.FloatTensor(state),0).to(self.actor_eval.device)
-        action = self.actor_eval(s).detach().cpu().numpy()
+
+        if self.learn_step < self.train_start:
+            action = np.random.randint(0, n_actions)
+        else:
+            action = self.actor_eval(s).detach().cpu().numpy()
+            noise = self.exploration_noise.sample()
+            action = np.clip(action + noise, -1.0, 1.0)
         self.transition = [state, action]
         return action
 
@@ -40,17 +51,18 @@ class TD3Agent(object):
         self.learn_step += 1
 
         samples = self.memory.sample_batch()
-        state = T.FloatTensor(samples['state']).to(self.actor.device)
-        action = T.Floattensor(samples['action']).to(self.actor.device)
-        reward = T.FloatTensor(samples['reward']).to(self.actor.device)
-        next_state = T.FloatTensor(samples['next_state']).to(self.actor.device)
-        done = T.FloatTensor(samples['done']).to(self.actor.device)
+        state = T.FloatTensor(samples['state']).to(self.actor_eval.device)
+        action = T.Floattensor(samples['action']).to(self.actor_eval.device)
+        reward = T.FloatTensor(samples['reward']).to(self.actor_eval.device)
+        next_state = T.FloatTensor(samples['next_state']).to(self.actor_eval.device)
+        done = T.FloatTensor(samples['done']).to(self.actor_eval.device)
 
-        mask = (1 - done).to(self.actor.device)
+        mask = (1 - done).to(self.actor_eval.device)
 
         with T.no_grad():
-            noise = (T.randn_like(action) * self.policy_noise).clamp(-self.noise_clip, slef.noise_clip)
-            next_action = (self.actor_target(next_state) + noise).clamp(-2, 2)
+            noise = (T.FloatTensor(self.target_policy_noise.sample()).to(self.actor_eval.device))
+            clip_noise = T.clamp(noise, -self.noise_clip, self.noise_clip)
+            next_action = (self.actor_target(next_state) + clip_noise).clamp(-1.0, 1.0)
 
             next_target_Q1, next_target_Q2 = self.critic_target.get_double_Q(next_state, next_action)
             next_target_Q = T.min(next_target_Q1, next_target_Q2)
@@ -100,11 +112,13 @@ if __name__ == '__main__':
                 'n_actions' : 3,
                 'GAMMA' : 0.99,
                 'tau' : 0.005,
+                'exploration_noise' : 0.1,
                 'policy_noise' : 0.2,
                 'noise_clip' : 0.5,
                 'lr' : 3e-4,
                 'update_time' : 2,
                 'memory_size' : 100000,
                 'batch_size' : 64,
-                'learn_step' : 0
+                'learn_step' : 0,
+                'train_start' : 1000
 }

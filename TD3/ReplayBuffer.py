@@ -1,10 +1,10 @@
 import numpy as np
 
 class ReplayBuffer:
-    def __init__(self, memory_size, n_states, n_actions, batch_size=32):
+    def __init__(self, memory_size, n_states, batch_size=32):
         state = np.zeros([memory_size, n_states], dtype=np.Float32)
         next_state = np.zeros([memory_size, n_states], dtype=np.float32)
-        action = np.zeros([memory_size, n_actions],dtype=np.float32)
+        action = np.zeros([memory_size],dtype=np.float32)
         reward = np.zeros([memory_size], dtype=np.float32)
         done = np.zeros([memory_size], dtype=np.float32)
 
