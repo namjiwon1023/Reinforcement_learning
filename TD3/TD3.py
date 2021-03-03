@@ -5,6 +5,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import numpy as np
 import copy
+import gym
 
 from ReplayBuffer import ReplayBuffer
 from ActorNetwork import ActorNetwork
@@ -17,15 +18,40 @@ def _layer_norm(layer, std=1.0, bias_const=1e-6):
         T.nn.init.orthogonal_(layer.weight, std)
         T.nn.init.constant_(layer.bias, bias_const)
 
+'''OpenAI Gym '''
+class ActionNormalizer(gym.ActionWrapper):
+    def action(self, action: np.ndarray) -> np.ndarray:
+        low = self.action_space.low
+        high = self.action_space.high
+        scale_factor = (high - low) / 2
+        reloc_factor = high - scale_factor
+        action = action * scale_factor + reloc_factor
+        action = np.clip(action, low, high)
+        return action
+
+    def reverse_action(self, action: np.ndarray) -> np.ndarray:
+        low = self.action_space.low
+        high = self.action_space.high
+        scale_factor = (high - low) / 2
+        reloc_factor = high - scale_factor
+        action = (action - reloc_factor) / scale_factor
+        action = np.clip(action, -1.0, 1.0)
+        return action
+
 class TD3Agent(object):
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-        self.actor_eval = ActorNetwork(self.n_states, self.n_actions, self.lr)
+        self.env = gym.make('Pendulum-v0')
+        self.n_states =  self.env.observation_space.shape[0]
+        self.n_actions = self.env.action_space.shape[0]
+        self.env = ActionNormalizer(self.env)
+
+        self.actor_eval = ActorNetwork(self.n_states, self.n_actions, self.actor_lr)
         self.actor_target = copy.deepcopy(self.actor_eval)
 
-        self.critic_eval = CriticNetwork(self.n_states, self.n_actions, self.lr)
+        self.critic_eval = CriticNetwork(self.n_states, self.n_actions, self.critic_lr)
         self.critic_target = copy.deepcopy(self.critic_eval)
 
         self.memory = ReplayBuffer(self.memory_size, self.n_states)
@@ -36,12 +62,14 @@ class TD3Agent(object):
 
 
     def choose_action(self, state, n_actions):
-        s = T.unsqueeze(T.FloatTensor(state),0).to(self.actor_eval.device)
+        # s = T.unsqueeze(T.FloatTensor(state),0).to(self.actor_eval.device)
 
-        if self.learn_step < self.train_start:
-            action = np.random.randint(0, n_actions)
+        if self.total_episode < self.train_start:
+            # action = np.random.randint(0, n_actions)
+            action = self.env.action_space.sample()
         else:
-            action = self.actor_eval(s).detach().cpu().numpy()
+            # action = self.actor_eval(s).detach().cpu().numpy()
+            action = self.actor_eval(T.FloatTensor(state).to(self.actor_eval.device))[0].detach().cpu().numpy()
             noise = self.exploration_noise.sample()
             action = np.clip(action + noise, -1.0, 1.0)
         self.transition = [state, action]
@@ -52,10 +80,10 @@ class TD3Agent(object):
 
         samples = self.memory.sample_batch()
         state = T.FloatTensor(samples['state']).to(self.actor_eval.device)
-        action = T.Floattensor(samples['action']).to(self.actor_eval.device)
-        reward = T.FloatTensor(samples['reward']).to(self.actor_eval.device)
+        action = T.FloatTensor(samples['action'].reshape(-1, 1)).to(self.actor_eval.device)
+        reward = T.FloatTensor(samples['reward'].reshape(-1, 1)).to(self.actor_eval.device)
         next_state = T.FloatTensor(samples['next_state']).to(self.actor_eval.device)
-        done = T.FloatTensor(samples['done']).to(self.actor_eval.device)
+        done = T.FloatTensor(samples['done'].reshape(-1, 1)).to(self.actor_eval.device)
 
         mask = (1 - done).to(self.actor_eval.device)
 
@@ -66,7 +94,7 @@ class TD3Agent(object):
 
             next_target_Q1, next_target_Q2 = self.critic_target.get_double_Q(next_state, next_action)
             next_target_Q = T.min(next_target_Q1, next_target_Q2)
-            target_Q = reward + self.gamma *next_target_Q*mask
+            target_Q = reward + self.GAMMA*next_target_Q*mask
 
         current_Q1, current_Q2 = self.critic_eval.get_double_Q(state, action)
         critic_loss = F.mse_loss(current_Q1, target_Q) + F.mse_loss(current_Q2, target_Q)
@@ -105,20 +133,3 @@ class TD3Agent(object):
         self.critic_target = copy.deepcopy(self.critic_eval)
 
 
-
-if __name__ == '__main__':
-    params = {
-                'n_states' : 29,
-                'n_actions' : 3,
-                'GAMMA' : 0.99,
-                'tau' : 0.005,
-                'exploration_noise' : 0.1,
-                'policy_noise' : 0.2,
-                'noise_clip' : 0.5,
-                'lr' : 3e-4,
-                'update_time' : 2,
-                'memory_size' : 100000,
-                'batch_size' : 64,
-                'learn_step' : 0,
-                'train_start' : 1000
-}

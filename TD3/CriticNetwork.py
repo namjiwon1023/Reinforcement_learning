@@ -21,8 +21,8 @@ class CriticNetwork(nn.Module):
                                 nn.ReLU(),
                                 nn.Linear(256, 1))
 
-        self.optimizer = optim.Adam(self.paramters(), lr=alpha)
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.optimizer = optim.Adam(self.parameters(), lr=alpha)
+        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
     def forward(self, state, action):

@@ -12,7 +12,7 @@ if __name__ == '__main__':
     agent = Agent(n_actions=env.action_space.n, batch_size=batch_size,alpha=alpha,n_epochs=n_epochs,input_dims=env.observation_space.shape)
     n_games = 300
 
-    figure_file = '/home/nam/Reinforcement_learning/PPO/plots/cartpole.png'
+    figure_file = '/home/nam/Reinforcement_learning/GAE_PPO/cartpole.png'
     print('reward_range[0] : ',env.reward_range[0])
     best_score = env.reward_range[0]
     score_history = []

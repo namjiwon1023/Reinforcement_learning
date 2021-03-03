@@ -49,7 +49,7 @@ class PPOMemory:
 
 class ActorNetwork(nn.Module):
     def __init__(self, n_actions, input_dims, alpha,
-                fc1_dims=256, fc2_dims=256, chkpt_dir='/home/nam/Reinforcement_learning/PPO'):
+                fc1_dims=256, fc2_dims=256, chkpt_dir='/home/nam/Reinforcement_learning/GAE_PPO'):
         super(ActorNetwork, self).__init__()
         self.checkpoint_file = os.path.join(chkpt_dir, 'actor_torch_ppo')
         self.actor = nn.Sequential(
@@ -78,7 +78,7 @@ class ActorNetwork(nn.Module):
         self.load_state_dict(T.load(self.checkpoint_file))
 
 class CriticNetwork(nn.Module):
-    def __init__(self, input_dims, alpha, fc1_dims=256, fc2_dims=256, chkpt_dir='/home/nam/Reinforcement_learning/PPO'):
+    def __init__(self, input_dims, alpha, fc1_dims=256, fc2_dims=256, chkpt_dir='/home/nam/Reinforcement_learning/GAE_PPO'):
         super(CriticNetwork, self).__init__()
 
         self.checkpoint_file = os.path.join(chkpt_dir, 'critic_torch_ppo')
