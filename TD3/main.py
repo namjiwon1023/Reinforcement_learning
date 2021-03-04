@@ -5,6 +5,7 @@ import numpy as np
 import os
 import gym
 import random
+import matplotlib.pyplot as plt
 
 from ReplayBuffer import ReplayBuffer
 from ActorNetwork import ActorNetwork
@@ -29,7 +30,7 @@ if __name__ == '__main__':
                 'total_episode' : 0,
                 'train_start' : 1000
 }
-    if torch.backends.cudnn.enabled:
+    if T.backends.cudnn.enabled:
         T.backends.cudnn.benchmark = False
         T.backends.cudnn.deterministic = True
 
@@ -39,7 +40,7 @@ if __name__ == '__main__':
     random.seed(seed)
 
     agent = TD3Agent(**params)
-    n_games = 50000
+    n_games = int(1e6)
     figure_file = '/home/nam/Reinforcement_learning/TD3/Pendulum.png'
     best_score = agent.env.reward_range[0]
     scores = []
@@ -47,6 +48,10 @@ if __name__ == '__main__':
     learn_iters = 0
     avg_score = 0
     n_steps = 0
+
+    plt.ion()
+    plt.figure()
+
 
     for i in range(1, n_games + 1):
         state = agent.env.reset()
@@ -81,6 +86,23 @@ if __name__ == '__main__':
             agent.save_models()
 
         print('episode',i,'score %.1f' %score,'avg score %.1f' % avg_score, 'time_steps',n_steps, 'learning_step',learn_iters)
+
+        z = [c+1 for c in range(len(scores))]
+        running_avg = np.zeros(len(scores))
+        for e in range(len(running_avg)):
+            running_avg[e] = np.mean(scores[max(0, e-100):(e+1)])
+        plt.cla()
+        plt.title("Total_scores")
+        plt.grid(True)
+        plt.xlabel("Episode_Reward")
+        plt.ylabel("Total reward")
+        plt.plot(scores, "r-", linewidth=2.0, label="TD3_Episode_Reward")
+        plt.plot(z, running_avg, "b--", linewidth=2.0, label="TD3_Avg_Reward")
+        plt.legend(loc="best", shadow=True)
+        plt.pause(0.1)
+        # plt.ioff()
+        plt.show()
+
 
     x = [i+1 for i in range(len(scores))]
     plot_learning_curve(x, scores, figure_file)
