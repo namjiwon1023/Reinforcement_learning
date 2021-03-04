@@ -13,30 +13,30 @@ from CriticNetwork import CriticNetwork
 from GaussianNoise import GaussianNoise
 
 
-def _layer_norm(layer, std=1.0, bias_const=1e-6):
-    if type(layer) == nn.Linear:
-        T.nn.init.orthogonal_(layer.weight, std)
-        T.nn.init.constant_(layer.bias, bias_const)
+# def _layer_norm(layer, std=1.0, bias_const=1e-6):
+#     if type(layer) == nn.Linear:
+#         T.nn.init.orthogonal_(layer.weight, std)
+#         T.nn.init.constant_(layer.bias, bias_const)
 
-'''OpenAI Gym '''
-class ActionNormalizer(gym.ActionWrapper):
-    def action(self, action: np.ndarray) -> np.ndarray:
-        low = self.action_space.low
-        high = self.action_space.high
-        scale_factor = (high - low) / 2
-        reloc_factor = high - scale_factor
-        action = action * scale_factor + reloc_factor
-        action = np.clip(action, low, high)
-        return action
+# '''OpenAI Gym '''
+# class ActionNormalizer(gym.ActionWrapper):
+#     def action(self, action: np.ndarray) -> np.ndarray:
+#         low = self.action_space.low
+#         high = self.action_space.high
+#         scale_factor = (high - low) / 2
+#         reloc_factor = high - scale_factor
+#         action = action * scale_factor + reloc_factor
+#         action = np.clip(action, low, high)
+#         return action
 
-    def reverse_action(self, action: np.ndarray) -> np.ndarray:
-        low = self.action_space.low
-        high = self.action_space.high
-        scale_factor = (high - low) / 2
-        reloc_factor = high - scale_factor
-        action = (action - reloc_factor) / scale_factor
-        action = np.clip(action, -1.0, 1.0)
-        return action
+#     def reverse_action(self, action: np.ndarray) -> np.ndarray:
+#         low = self.action_space.low
+#         high = self.action_space.high
+#         scale_factor = (high - low) / 2
+#         reloc_factor = high - scale_factor
+#         action = (action - reloc_factor) / scale_factor
+#         action = np.clip(action, -1.0, 1.0)
+#         return action
 
 class TD3Agent(object):
     def __init__(self, **kwargs):
@@ -50,18 +50,18 @@ class TD3Agent(object):
         # self.env = ActionNormalizer(self.env)
 
         self.actor_eval = ActorNetwork(self.n_states, self.n_actions, self.actor_lr)
-        self.actor_eval.apply(_layer_norm)
+        # self.actor_eval.apply(_layer_norm)
         self.actor_target = copy.deepcopy(self.actor_eval)
 
         self.critic_eval = CriticNetwork(self.n_states, self.n_actions, self.critic_lr)
-        self.critic_eval.apply(_layer_norm)
+        # self.critic_eval.apply(_layer_norm)
         self.critic_target = copy.deepcopy(self.critic_eval)
 
         self.memory = ReplayBuffer(self.memory_size, self.n_states)
         self.transition = list()
 
-        self.exploration_noise = GaussianNoise(self.n_actions, self.exploration_noise, self.exploration_noise)
-        self.target_policy_noise = GaussianNoise(self.n_actions, self.policy_noise, self.policy_noise)
+        # self.exploration_noise = GaussianNoise(self.n_actions, self.exploration_noise, self.exploration_noise)
+        # self.target_policy_noise = GaussianNoise(self.n_actions, self.policy_noise, self.policy_noise)
 
 
     def choose_action(self, state, n_actions):
