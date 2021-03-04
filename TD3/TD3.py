@@ -46,12 +46,15 @@ class TD3Agent(object):
         self.env = gym.make('Pendulum-v0')
         self.n_states =  self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.shape[0]
-        self.env = ActionNormalizer(self.env)
+        self.max_action = float(self.env.action_space.high[0])
+        # self.env = ActionNormalizer(self.env)
 
         self.actor_eval = ActorNetwork(self.n_states, self.n_actions, self.actor_lr)
+        self.actor_eval.apply(_layer_norm)
         self.actor_target = copy.deepcopy(self.actor_eval)
 
         self.critic_eval = CriticNetwork(self.n_states, self.n_actions, self.critic_lr)
+        self.critic_eval.apply(_layer_norm)
         self.critic_target = copy.deepcopy(self.critic_eval)
 
         self.memory = ReplayBuffer(self.memory_size, self.n_states)
@@ -63,15 +66,16 @@ class TD3Agent(object):
 
     def choose_action(self, state, n_actions):
         # s = T.unsqueeze(T.FloatTensor(state),0).to(self.actor_eval.device)
-
+        s = np.array(state)
         if self.total_episode < self.train_start:
             # action = np.random.randint(0, n_actions)
             action = self.env.action_space.sample()
         else:
             # action = self.actor_eval(s).detach().cpu().numpy()
-            action = self.actor_eval(T.FloatTensor(state).to(self.actor_eval.device))[0].detach().cpu().numpy()
-            noise = self.exploration_noise.sample()
-            action = np.clip(action + noise, -1.0, 1.0)
+            action = self.actor_eval(T.FloatTensor(s.reshape(1, -1)).to(self.actor_eval.device)).detach().cpu().numpy().flatten()
+            # noise = self.exploration_noise.sample()
+            noise = np.random.normal(0, self.max_action*self.exploration_noise, size = self.n_actions)
+            action = np.clip(action + noise, -self.max_action, self.max_action)
         self.transition = [state, action]
         return action
 
@@ -88,9 +92,10 @@ class TD3Agent(object):
         mask = (1 - done).to(self.actor_eval.device)
 
         with T.no_grad():
-            noise = (T.FloatTensor(self.target_policy_noise.sample()).to(self.actor_eval.device))
-            clip_noise = T.clamp(noise, -self.noise_clip, self.noise_clip)
-            next_action = (self.actor_target(next_state) + clip_noise).clamp(-1.0, 1.0)
+            # noise = (T.FloatTensor(self.target_policy_noise.sample()).to(self.actor_eval.device))
+            # clip_noise = T.clamp(noise, -self.noise_clip, self.noise_clip)
+            noise = (T.randn_like(action)*self.policy_noise).clamp(-self.noise_clip, self.noise_clip)
+            next_action = (self.actor_target(next_state) + noise).clamp(-self.max_action, self.max_action)
 
             next_target_Q1, next_target_Q2 = self.critic_target.get_double_Q(next_state, next_action)
             next_target_Q = T.min(next_target_Q1, next_target_Q2)

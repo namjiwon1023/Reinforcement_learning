@@ -4,6 +4,7 @@ import torch.optim as optim
 import numpy as np
 import os
 import gym
+import random
 
 from ReplayBuffer import ReplayBuffer
 from ActorNetwork import ActorNetwork
@@ -28,6 +29,14 @@ if __name__ == '__main__':
                 'total_episode' : 0,
                 'train_start' : 1000
 }
+    if torch.backends.cudnn.enabled:
+        T.backends.cudnn.benchmark = False
+        T.backends.cudnn.deterministic = True
+
+    seed = 777
+    T.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
 
     agent = TD3Agent(**params)
     n_games = 50000
@@ -46,6 +55,9 @@ if __name__ == '__main__':
 
         done = False
         score = 0
+
+        np.savetxt("./Total_scores.txt",scores, delimiter=",")
+
         while not done:
             agent.env.render()
             action = agent.choose_action(state, agent.n_actions)

@@ -29,6 +29,3 @@ class ReplayBuffer:
                     reward = self.reward[index],
                     next_state = self.next_state[index],
                     done = self.done[index])
-
-    def __len__(self):
-        return self.size
