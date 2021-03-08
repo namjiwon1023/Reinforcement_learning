@@ -40,6 +40,6 @@ class CriticNetwork(nn.Module):
         T.save(self.state_dict(), self.dirPath)
         T.save(self.optimizer.state_dict(), self.dirPath + '_optimizer')
 
-    def load_model(self):
+    def load_models(self):
         self.load_state_dict(T.load(self.dirPath))
         self.optimizer.load_state_dict(T.load(self.dirPath + '_optimizer'))

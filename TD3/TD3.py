@@ -49,7 +49,7 @@ class TD3Agent(object):
         self.max_action = float(self.env.action_space.high[0])
         # self.env = ActionNormalizer(self.env)
 
-        self.actor_eval = ActorNetwork(self.n_states, self.n_actions, self.actor_lr)
+        self.actor_eval = ActorNetwork(self.n_states, self.n_actions, self.actor_lr, self.max_action)
         # self.actor_eval.apply(_layer_norm)
         self.actor_target = copy.deepcopy(self.actor_eval)
 
@@ -64,19 +64,22 @@ class TD3Agent(object):
         # self.target_policy_noise = GaussianNoise(self.n_actions, self.policy_noise, self.policy_noise)
 
 
-    def choose_action(self, state, n_actions):
+    def choose_action(self, state, n_actions, test_mode=self.test_mode):
         # s = T.unsqueeze(T.FloatTensor(state),0).to(self.actor_eval.device)
         s = np.array(state)
-        if self.total_episode < self.train_start:
+        if (self.total_episode < self.train_start) and not test_mode:
             # action = np.random.randint(0, n_actions)
             action = self.env.action_space.sample()
+        elif test_mode == True:
+            action = self.actor_eval(T.FloatTensor(s.reshape(1, -1)).to(self.actor_eval.device)).detach().cpu().numpy()
         else:
             # action = self.actor_eval(s).detach().cpu().numpy()
             action = self.actor_eval(T.FloatTensor(s.reshape(1, -1)).to(self.actor_eval.device)).detach().cpu().numpy().flatten()
             # noise = self.exploration_noise.sample()
             noise = np.random.normal(0, self.max_action*self.exploration_noise, size = self.n_actions)
             action = np.clip(action + noise, -self.max_action, self.max_action)
-        self.transition = [state, action]
+        if not test_mode:
+            self.transition = [state, action]
         return action
 
     def learn(self):
@@ -94,7 +97,7 @@ class TD3Agent(object):
         with T.no_grad():
             # noise = (T.FloatTensor(self.target_policy_noise.sample()).to(self.actor_eval.device))
             # clip_noise = T.clamp(noise, -self.noise_clip, self.noise_clip)
-            noise = (T.randn_like(action)*self.policy_noise).clamp(-self.noise_clip, self.noise_clip)
+            noise = (T.randn_like(action)*self.policy_noise*self.max_action).clamp(-self.noise_clip*self.max_action, self.noise_clip*self.max_action)
             next_action = (self.actor_target(next_state) + noise).clamp(-self.max_action, self.max_action)
 
             next_target_Q1, next_target_Q2 = self.critic_target.get_double_Q(next_state, next_action)

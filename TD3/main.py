@@ -28,7 +28,8 @@ if __name__ == '__main__':
                 'batch_size' : 128,
                 'learn_step' : 0,
                 'total_episode' : 0,
-                'train_start' : 1000
+                'train_start' : 1000,
+                'test_mode' : False,
 }
     if T.backends.cudnn.enabled:
         T.backends.cudnn.benchmark = False
