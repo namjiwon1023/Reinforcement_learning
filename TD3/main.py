@@ -51,7 +51,7 @@ if __name__ == '__main__':
     n_steps = 0
 
     plt.ion()
-    plt.figure()
+    plt.figure(figsize=(30, 5))
 
 
     for i in range(1, n_games + 1):
@@ -80,7 +80,7 @@ if __name__ == '__main__':
                 learn_iters += 1
             state = next_state
         scores.append(score)
-        avg_score = np.mean(scores[-100:])
+        avg_score = np.mean(scores[-10:])
 
         if avg_score > best_score:
             best_score = avg_score
@@ -91,14 +91,14 @@ if __name__ == '__main__':
         z = [c+1 for c in range(len(scores))]
         running_avg = np.zeros(len(scores))
         for e in range(len(running_avg)):
-            running_avg[e] = np.mean(scores[max(0, e-100):(e+1)])
+            running_avg[e] = np.mean(scores[max(0, e-10):(e+1)])
         plt.cla()
         plt.title("Total_scores")
         plt.grid(True)
         plt.xlabel("Episode_Reward")
         plt.ylabel("Total reward")
-        plt.plot(scores, "r-", linewidth=2.0, label="TD3_Episode_Reward")
-        plt.plot(z, running_avg, "b-", linewidth=2.0, label="TD3_Avg_Reward")
+        plt.plot(scores, "r-", linewidth=1.5, label="TD3_Episode_Reward")
+        plt.plot(z, running_avg, "b-", linewidth=1.5, label="TD3_Avg_Reward")
         plt.legend(loc="best", shadow=True)
         plt.pause(0.1)
         # plt.ioff()
