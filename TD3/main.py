@@ -98,7 +98,7 @@ if __name__ == '__main__':
         plt.xlabel("Episode_Reward")
         plt.ylabel("Total reward")
         plt.plot(scores, "r-", linewidth=2.0, label="TD3_Episode_Reward")
-        plt.plot(z, running_avg, "b--", linewidth=2.0, label="TD3_Avg_Reward")
+        plt.plot(z, running_avg, "b-", linewidth=2.0, label="TD3_Avg_Reward")
         plt.legend(loc="best", shadow=True)
         plt.pause(0.1)
         # plt.ioff()
