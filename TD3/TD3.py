@@ -64,7 +64,8 @@ class TD3Agent(object):
         # self.target_policy_noise = GaussianNoise(self.n_actions, self.policy_noise, self.policy_noise)
 
 
-    def choose_action(self, state, n_actions, test_mode=self.test_mode):
+    def choose_action(self, state, n_actions, test_mode):
+        test_mode = self.test_mode
         # s = T.unsqueeze(T.FloatTensor(state),0).to(self.actor_eval.device)
         s = np.array(state)
         if (self.total_episode < self.train_start) and not test_mode:
