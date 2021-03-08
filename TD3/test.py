@@ -52,7 +52,7 @@ if __name__ == '__main__':
 
         while not done:
             agent.env.render()
-            action = agent.choose_action(state, agent.n_actions, test_mode=True)
+            action = agent.choose_action(state, agent.n_actions, agent.test_mode)
             next_state, reward, done, _ = agent.env.step(action)
             score += reward
             state = next_state
