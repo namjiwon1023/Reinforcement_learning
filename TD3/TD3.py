@@ -43,7 +43,8 @@ class TD3Agent(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-        self.env = gym.make('Pendulum-v0')
+        # self.env = gym.make('Pendulum-v0')
+        self.env = gym.make('LunarLanderContinuous-v2')
         self.n_states =  self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.shape[0]
         self.max_action = float(self.env.action_space.high[0])
@@ -57,7 +58,7 @@ class TD3Agent(object):
         # self.critic_eval.apply(_layer_norm)
         self.critic_target = copy.deepcopy(self.critic_eval)
 
-        self.memory = ReplayBuffer(self.memory_size, self.n_states)
+        self.memory = ReplayBuffer(self.memory_size, self.n_states, self.n_actions)
         self.transition = list()
 
         # self.exploration_noise = GaussianNoise(self.n_actions, self.exploration_noise, self.exploration_noise)
@@ -88,7 +89,7 @@ class TD3Agent(object):
 
         samples = self.memory.sample_batch()
         state = T.FloatTensor(samples['state']).to(self.actor_eval.device)
-        action = T.FloatTensor(samples['action'].reshape(-1, 1)).to(self.actor_eval.device)
+        action = T.FloatTensor(samples['action'].reshape(-1, self.n_actions)).to(self.actor_eval.device)
         reward = T.FloatTensor(samples['reward'].reshape(-1, 1)).to(self.actor_eval.device)
         next_state = T.FloatTensor(samples['next_state']).to(self.actor_eval.device)
         done = T.FloatTensor(samples['done'].reshape(-1, 1)).to(self.actor_eval.device)
