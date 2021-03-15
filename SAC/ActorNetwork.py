@@ -6,7 +6,7 @@ import os
 from torch.distributions import Normal
 
 class ActorNetwork(nn.Module):
-    def __init__(self, n_states, n_actions, n_hidden, max_std, min_std, alpha,
+    def __init__(self, n_states, n_actions, n_hidden, min_log_std, max_log_std, alpha,
                     dirPath='/home/nam/Reinforcement_learning/SAC'):
         super(ActorNetwork, self).__init__()
         self.checkpoint_path = os.path.join(dirPath, 'sac_actor')
@@ -23,18 +23,17 @@ class ActorNetwork(nn.Module):
         self.avg = nn.Sequential(nn.Linear(n_hidden, n_actions))
         self.log_std = nn.Sequential(nn.Linear(n_hidden, n_actions))
 
+        self.max_log_std = max_log_std
+        self.min_log_std = min_log_std
+
     def forward(self, state):
         feature = self.mlp1(state)
 
         avg = self.avg(feature)
         log_std = self.log_std(feature)
-        std = T.exp(log_std)
+        log_std = T.clamp(log_std, min=self.min_log_std, max=self.max_log_std)
 
-        dist = Normal(avg, std)
-        action = dist.sample()
-        log_prob = dist.log_prob(action)
-
-        return action, log_prob
+        return (avg, T.exp(log_std))
 
     def save_models(self):
         T.save(self.state_dict(), self.checkpoint_path)
