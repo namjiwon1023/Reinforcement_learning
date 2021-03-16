@@ -8,8 +8,8 @@ import random
 import matplotlib.pyplot as plt
 
 from ReplayBuffer import ReplayBuffer
-from ActorNetwork import Actor
-from CriticNetwork import CriticQ, CriticV
+from ActorNetwork import ActorNetwork
+from CriticNetwork import CriticNetwork
 from SAC import SACAgent
 from utils import plot_learning_curve
 
@@ -20,7 +20,7 @@ if __name__ == '__main__':
                 'tau' : 0.005,
                 'update_time' : 1,
                 'memory_size' : int(1e6),
-                'batch_size' : 128,
+                'batch_size' : 256,
                 'learn_step' : 0,
                 'total_episode' : 0,
                 'train_start' : 1000,
@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
         while not done:
             agent.env.render()
-            action = agent.choose_action(state, agent.n_actions, agent.test_mode)
+            action = agent.choose_action(state, agent.test_mode)
             next_state, reward, done, _ = agent.env.step(action)
             # next_state = next_state.reshape(len(next_state))
             # print('next_state : ', next_state)
@@ -71,7 +71,7 @@ if __name__ == '__main__':
 
         if avg_score > best_score:
             best_score = avg_score
-            agent.save_models()
+            # agent.save_models()
 
         print('episode',i,'score %.1f' %score,'avg score %.1f' % avg_score, 'time_steps',n_steps, 'learning_step',learn_iters)
 
