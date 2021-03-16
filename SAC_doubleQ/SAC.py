@@ -122,7 +122,7 @@ class SACAgent:
         for p in self.critic_eval.parameters():
             p.requires_grad = False
 
-        new_action, new_log_prob = self.self.actor(state, test_mode=False, with_logprob=True)
+        new_action, new_log_prob = self.actor(state, test_mode=False, with_logprob=True)
         q_1, q_2 = self.critic_eval(state, new_action)
         q = T.min(q_1, q_2)
         actor_loss = (self.alpha * new_log_prob - q).mean()
