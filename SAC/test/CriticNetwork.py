@@ -4,38 +4,32 @@ import torch.optim as optim
 import os
 
 class CriticQ(nn.Module):
-    def __init__(self, in_dim):
-
+    def __init__(self, n_states):
         super(CriticQ, self).__init__()
-
-        self.hidden1 = nn.Linear(in_dim, 128)
-        self.hidden2 = nn.Linear(128, 128)
-        self.out = nn.Linear(128, 1)
-        self.out = init_layer_uniform(self.out)
-
+        self.criticQ_1 = nn.Sequential(nn.Linear(n_states, 128),
+                                        nn.ReLU(),
+                                        nn.Linear(128, 128),
+                                        nn.ReLU(),
+                                        nn.Linear(128, 1))
+        self.criticQ_2 = nn.Sequential(nn.Linear(n_states, 128),
+                                        nn.ReLU(),
+                                        nn.Linear(128, 128),
+                                        nn.ReLU(),
+                                        nn.Linear(128, 1))
     def forward(self, state, action):
-
-        x = torch.cat((state, action), dim=-1)
-        x = F.relu(self.hidden1(x))
-        x = F.relu(self.hidden2(x))
-        value = self.out(x)
-
-        return value
+        x = T.cat((state, action), dim=-1)
+        Q1 = self.criticQ_1(x)
+        Q2 = self.criticQ_2(x)
+        return Q1. Q2
 
 class CriticV(nn.Module):
-    def __init__(self, in_dim):
-
+    def __init__(self, n_states):
         super(CriticV, self).__init__()
-
-        self.hidden1 = nn.Linear(in_dim, 128)
-        self.hidden2 = nn.Linear(128, 128)
-        self.out = nn.Linear(128, 1)
-        self.out = init_layer_uniform(self.out)
-
+        self.criticV = nn.Sequential(nn.Linear(n_states, 128),
+                                        nn.ReLU(),
+                                        nn.Linear(128, 128),
+                                        nn.ReLU(),
+                                        nn.Linear(128, 1))
     def forward(self, state):
-
-        x = F.relu(self.hidden1(state))
-        x = F.relu(self.hidden2(x))
-        value = self.out(x)
-
+        value = self.criticV(state)
         return value

@@ -43,15 +43,13 @@ class SACAgent:
         self.vf = CriticV(self.n_states).to(device)
         self.vf_target = copy.deepcopy(vf)
 
-        self.qf_1 = CriticQ(self.n_states + self.n_actions).to(device)
-        self.qf_2 = CriticQ(self.n_states + self.n_actions).to(device)
+        self.qf = CriticQ(self.n_states + self.n_actions).to(device)
 
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=3e-4)
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=3e-4)
 
         self.vf_optimizer = optim.Adam(self.vf.parameters(), lr=3e-4)
-        self.qf_1_optimizer = optim.Adam(self.qf_1.parameters(), lr=3e-4)
-        self.qf_2_optimizer = optim.Adam(self.qf_2.parameters(), lr=3e-4)
+        self.qf_optimizer = optim.Adam(self.qf.parameters(), lr=3e-4)
 
         self.transition = list()
 
@@ -89,15 +87,13 @@ class SACAgent:
         alpha = self.log_alpha.exp()
 
         mask = 1 - done
-        q_1_pred = self.qf_1(state, action)
-        q_2_pred = self.qf_2(state, action)
+        q_1_pred, q_2_pred = self.qf(state, action)
         v_target = self.vf_target(next_state)
         q_target = reward + self.gamma * v_target * mask
-        qf_1_loss = F.mse_loss(q_1_pred, q_target.detach())
-        qf_2_loss = F.mse_loss(q_2_pred, q_target.detach())
+        qf_loss = F.mse_loss(q_1_pred, q_target.detach()) + F.mse_loss(q_2_pred, q_target.detach())
 
         v_pred = self.vf(state)
-        q_pred = T.min(self.qf_1(state, new_action), self.qf_2(state, new_action))
+        q_pred = T.min(*self.qf(state, new_action))
 
         v_target = q_pred - alpha * log_prob
         vf_loss = F.mse_loss(v_pred, vf_target.detach())
@@ -114,15 +110,9 @@ class SACAgent:
         else:
             actor_loss = T.zeros(1)
 
-        self.qf_1_optimizer.zero_grad()
-        qf_1_loss.backward()
-        self.qf_1_optimizer.step()
-
-        self.qf_2_optimizer.zero_grad()
-        qf_2_loss.backward()
-        self.qf_2_optimizer.step()
-
-        qf_loss = qf_1_loss + qf_2_loss
+        self.qf_optimizer.zero_grad()
+        qf_loss.backward()
+        self.qf_optimizer.step()
 
         self.vf_optimizer.zero_grad()
         vf_loss.backward()
