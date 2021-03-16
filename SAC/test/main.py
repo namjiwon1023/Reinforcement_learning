@@ -8,41 +8,28 @@ import random
 import matplotlib.pyplot as plt
 
 from ReplayBuffer import ReplayBuffer
-from ActorNetwork import ActorNetwork
-from CriticNetwork import CriticNetwork
-from GaussianNoise import GaussianNoise
-from TD3 import TD3Agent
+from ActorNetwork import Actor
+from CriticNetwork import CriticQ, CriticV
+from SAC import SACAgent
 from utils import plot_learning_curve
 
 if __name__ == '__main__':
     params = {
                 'GAMMA' : 0.99,
+                'learning_rate' : 3e-4,
                 'tau' : 0.005,
-                'exploration_noise' : 0.1,
-                'policy_noise' : 0.2,
-                'noise_clip' : 0.5,
-                'actor_lr' : 3e-4,
-                'critic_lr' : 1e-3,
-                'update_time' : 2,
-                'memory_size' : 100000,
+                'update_time' : 1,
+                'memory_size' : int(1e6),
                 'batch_size' : 128,
                 'learn_step' : 0,
                 'total_episode' : 0,
                 'train_start' : 1000,
                 'test_mode' : False,
 }
-    if T.backends.cudnn.enabled:
-        T.backends.cudnn.benchmark = False
-        T.backends.cudnn.deterministic = True
 
-    seed = 777
-    T.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-
-    agent = TD3Agent(**params)
+    agent = SACAgent(**params)
     n_games = int(1e6)
-    figure_file = '/home/nam/Reinforcement_learning/TD3/Pendulum.png'
+    figure_file = '/home/nam/Reinforcement_learning/SAC/Pendulum.png'
     best_score = agent.env.reward_range[0]
     scores = []
     # N = 20

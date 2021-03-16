@@ -45,18 +45,18 @@ class SACAgent:
 
         self.qf = CriticQ(self.n_states + self.n_actions).to(device)
 
-        self.alpha_optimizer = optim.Adam([self.log_alpha], lr=3e-4)
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=3e-4)
+        self.alpha_optimizer = optim.Adam([self.log_alpha], lr=self.learning_rate)
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=self.learning_rate)
 
-        self.vf_optimizer = optim.Adam(self.vf.parameters(), lr=3e-4)
-        self.qf_optimizer = optim.Adam(self.qf.parameters(), lr=3e-4)
+        self.vf_optimizer = optim.Adam(self.vf.parameters(), lr=self.learning_rate)
+        self.qf_optimizer = optim.Adam(self.qf.parameters(), lr=self.learning_rate)
 
         self.transition = list()
 
         self.total_step = 0
 
     def choose_action(self, state):
-        if self.total_step < self.initial_random_steps and not self.test_model:
+        if (self.total_step < self.train_start) and not self.test_mode:
             action = self.env.action_space.sample()
         else:
             action = self.actor(T.FloatTensor(state).to(device))[0].detach().cpu().numpy()
@@ -89,7 +89,7 @@ class SACAgent:
         mask = 1 - done
         q_1_pred, q_2_pred = self.qf(state, action)
         v_target = self.vf_target(next_state)
-        q_target = reward + self.gamma * v_target * mask
+        q_target = reward + self.GAMMA * v_target * mask
         qf_loss = F.mse_loss(q_1_pred, q_target.detach()) + F.mse_loss(q_2_pred, q_target.detach())
 
         v_pred = self.vf(state)
