@@ -81,7 +81,7 @@ class SACAgent:
 
         self.total_step = 0
 
-        # BC loss
+        # BC
         lambda1 = 1e-3
         lambda2 = 1.0
         self.lambda1 = lambda1
