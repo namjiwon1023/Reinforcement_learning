@@ -132,7 +132,7 @@ class SACAgent:
             next_action, next_log_prob = self.actor(next_state, test_mode=False, with_logprob=True)
             q1_target, q2_target = self.critic_target(next_state, next_action)
             q_target = T.min(q1_target, q2_target)
-            value_target = reward + self.GAMMA * (q_target - self.alpha * next_log_prob)
+            value_target = reward + self.GAMMA * (q_target - self.alpha * next_log_prob) # action value function(Q_soft)
         q1_eval, q2_eval = self.critic_eval(state, action)
         critic_loss = F.mse_loss(q1_eval, value_target) + F.mse_loss(q2_eval, value_target)
 
@@ -142,14 +142,14 @@ class SACAgent:
 
         for p in self.critic_eval.parameters():
             p.requires_grad = False
-
+        # actor and alpha update
         new_action, new_log_prob = self.actor(state, test_mode=False, with_logprob=True)
         q_1, q_2 = self.critic_eval(state, new_action)
         q = T.min(q_1, q_2)
-        pg_loss = (self.alpha * new_log_prob - q).mean()
+        pg_loss = (self.alpha * new_log_prob - q).mean()      # actor loss function
         alpha_loss = -self.log_alpha * (new_log_prob.detach() + self.target_entropy).mean()
 
-        pred_action = self.actor(state_b)
+        pred_action, _ = self.actor(state_b, test_mode=False, with_logprob=True)
         qf_mask = T.gt(self.critic_eval(state_b, action_b),self.critic_eval(state_b, pred_action),).to(self.critic_eval.device)
         qf_mask = qf_mask.float()
         n_qf_mask = int(qf_mask.sum().item())
