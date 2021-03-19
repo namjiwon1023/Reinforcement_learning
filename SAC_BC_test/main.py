@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
     agent = SACAgent(**params)
     n_games = int(1e6)
-    figure_file = '/home/nam/Reinforcement_learning/SAC/Pendulum.png'
+    figure_file = '/home/nam/Reinforcement_learning/SAC_BC_test/BipedalWalker.png'
     best_score = agent.env.reward_range[0]
     scores = []
     transitions = []
@@ -63,7 +63,7 @@ if __name__ == '__main__':
             score += reward
             agent.transition += [reward, next_state, done]
             agent.memory.store(*agent.transition)
-            transitions.append(agent.transition)
+            transitions.append(*agent.transition)
             if (len(agent.memory) >= agent.batch_size and agent.total_episode > agent.train_start):
                 # if n_steps % N == 0:
                 agent.learn()
@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
         if avg_score > best_score:
             best_score = avg_score
-            # agent.save_models()
+            agent.save_models()
 
         print('episode',i,'score %.1f' %score,'avg score %.1f' % avg_score, 'time_steps',n_steps, 'learning_step',learn_iters)
 
@@ -87,11 +87,10 @@ if __name__ == '__main__':
         plt.grid(True)
         plt.xlabel("Episode_Reward")
         plt.ylabel("Total reward")
-        plt.plot(scores, "r-", linewidth=1.5, label="TD3_Episode_Reward")
-        plt.plot(z, running_avg, "b-", linewidth=1.5, label="TD3_Avg_Reward")
+        plt.plot(scores, "r-", linewidth=1.5, label="SAC_Episode_Reward")
+        plt.plot(z, running_avg, "b-", linewidth=1.5, label="SAC_Avg_Reward")
         plt.legend(loc="best", shadow=True)
         plt.pause(0.1)
-        # plt.ioff()
         plt.show()
 
 

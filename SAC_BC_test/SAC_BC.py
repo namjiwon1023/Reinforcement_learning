@@ -62,7 +62,7 @@ class SACAgent:
         self.n_actions = self.env.action_space.shape[0]
         self.max_action = float(self.env.action_space.high[0])
 
-        self.memory = ReplayBuffer(self.memory_size, self.n_states, self.batch_size)
+        self.memory = ReplayBuffer(self.memory_size, self.n_states, self.n_actions, self.batch_size)
 
         self.target_entropy = -self.n_actions
         self.log_alpha = T.zeros(1, requires_grad=True, device=device)
@@ -89,7 +89,7 @@ class SACAgent:
         self.store_memory_batch_size = 128
         self.store_memory = np.load('store_memory.npy')
 
-        self.memory_backup = ReplayBuffer(len(self.store_memory), self.n_states, self.store_memory_batch_size)
+        self.memory_backup = ReplayBuffer(len(self.store_memory), self.n_states, self.n_actions, self.store_memory_batch_size)
         self.memory_backup.store_with_store_memory(self.store_memory)
 
     def choose_action(self, state, test_mode):
@@ -113,7 +113,7 @@ class SACAgent:
         samples = self.memory.sample_batch()
         state = T.FloatTensor(samples["state"]).to(self.actor.device)
         next_state = T.FloatTensor(samples["next_state"]).to(self.actor.device)
-        action = T.FloatTensor(samples["action"].reshape(-1, 1)).to(self.actor.device)
+        action = T.FloatTensor(samples["action"].reshape(-1, self.n_actions)).to(self.actor.device)
         reward = T.FloatTensor(samples["reward"].reshape(-1, 1)).to(self.actor.device)
         done = T.FloatTensor(samples["done"].reshape(-1, 1)).to(self.actor.device)
         mask = (1 - done).to(self.actor.device)
@@ -122,7 +122,7 @@ class SACAgent:
         samples_b = self.memory_backup.sample_batch()
         state_b = T.FloatTensor(samples_b["state"]).to(self.actor.device)
         next_state_b = T.FloatTensor(samples_b["next_state"]).to(self.actor.device)
-        action_b = T.FloatTensor(samples_b["action"].reshape(-1, 1)).to(self.actor.device)
+        action_b = T.FloatTensor(samples_b["action"].reshape(-1, self.n_actions)).to(self.actor.device)
         reward_b = T.FloatTensor(samples_b["reward"].reshape(-1, 1)).to(self.actor.device)
         done = T.FloatTensor(samples_b["done"].reshape(-1, 1)).to(self.actor.device)
 

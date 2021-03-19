@@ -54,16 +54,16 @@ class SACAgent:
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-        self.env = gym.make('BipedalWalker-v2')
+        self.env = gym.make('BipedalWalker-v3')
         # self.env = ActionNormalizer(self.env)
 
         self.n_states = self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.shape[0]
         self.max_action = float(self.env.action_space.high[0])
 
-        self.memory = ReplayBuffer(self.memory_size, self.n_states, self.batch_size)
+        self.memory = ReplayBuffer(self.memory_size, self.n_states, self.n_actions, self.batch_size)
 
-        self.target_entropy = -self.n_actions
+        self.target_entropy = -self.n_actions    # in the paper target entropy setting
         self.log_alpha = T.zeros(1, requires_grad=True, device=device)
         self.alpha = self.log_alpha.exp()
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=self.learning_rate)
@@ -84,7 +84,7 @@ class SACAgent:
         test_mode = self.test_mode
         if (self.total_step < self.train_start) and not test_mode:
             action = self.env.action_space.sample()
-        if self.test_mode is True:
+        if test_mode is True:
             action = self.actor(T.FloatTensor(state).to(self.actor.device), test_mode=True, with_logprob=False)[0].detach().cpu().numpy()
         else:
             action = self.actor(T.FloatTensor(state).to(self.actor.device), test_mode=False, with_logprob=True)[0].detach().cpu().numpy()
@@ -101,7 +101,7 @@ class SACAgent:
         samples = self.memory.sample_batch()
         state = T.FloatTensor(samples["state"]).to(self.actor.device)
         next_state = T.FloatTensor(samples["next_state"]).to(self.actor.device)
-        action = T.FloatTensor(samples["action"].reshape(-1, 1)).to(self.actor.device)
+        action = T.FloatTensor(samples["action"].reshape(-1, self.n_actions)).to(self.actor.device)
         reward = T.FloatTensor(samples["reward"].reshape(-1, 1)).to(self.actor.device)
         done = T.FloatTensor(samples["done"].reshape(-1, 1)).to(self.actor.device)
         mask = (1 - done).to(self.actor.device)
