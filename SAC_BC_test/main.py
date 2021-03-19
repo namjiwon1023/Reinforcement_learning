@@ -28,6 +28,18 @@ if __name__ == '__main__':
 }
 
     agent = SACAgent(**params)
+
+    sac_actor_parameter = '/home/nam/Reinforcement_learning/SAC_BC_test/sac_actor'
+    sac_actor_optimizer_parameter = '/home/nam/Reinforcement_learning/SAC_BC_test/sac_actor_optimizer'
+    sac_critic_parameter = '/home/nam/Reinforcement_learning/SAC_BC_test/sac_critic'
+    sac_critic_optimizer_parameter = '/home/nam/Reinforcement_learning/SAC_BC_test/sac_critic_optimizer'
+    alpha_optimizer_parameter = '/home/nam/Reinforcement_learning/SAC_BC_test/alpha_optimizer'
+
+    if os.path.exists(sac_actor_parameter) and os.path.exists(sac_actor_optimizer_parameter) and os.path.exists(sac_critic_parameter) and os.path.exists(sac_critic_optimizer_parameter) and os.path.exists(alpha_optimizer_parameter):
+        agent.load_models()
+    else:
+        print('------ No parameters available! ------')
+
     n_games = int(1e6)
     figure_file = '/home/nam/Reinforcement_learning/SAC_BC_test/BipedalWalker.png'
     best_score = agent.env.reward_range[0]
@@ -63,7 +75,7 @@ if __name__ == '__main__':
             score += reward
             agent.transition += [reward, next_state, done]
             agent.memory.store(*agent.transition)
-            transitions.append(*agent.transition)
+            transitions.append(agent.transition)
             if (len(agent.memory) >= agent.batch_size and agent.total_episode > agent.train_start):
                 # if n_steps % N == 0:
                 agent.learn()

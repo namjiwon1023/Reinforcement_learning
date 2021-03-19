@@ -80,6 +80,9 @@ class SACAgent:
 
         self.total_step = 0
 
+        dirPath='/home/nam/Reinforcement_learning/SAC_BC_test'
+        self.checkpoint = os.path.join(dirPath, 'alpha_optimizer')
+
     def choose_action(self, state, test_mode):
         test_mode = self.test_mode
         if (self.total_step < self.train_start) and not test_mode:
@@ -143,3 +146,19 @@ class SACAgent:
 
         if self.total_step % self.update_time == 0 :
             self.target_soft_update()
+
+    def save_models(self):
+        print('------ save models ------')
+        self.actor.save_models()
+        self.critic_eval.save_models()
+
+        T.save(self.alpha_optimizer.state_dict(), self.checkpoint)
+
+    def load_models(self):
+        print('------ load models ------')
+        self.alpha_optimizer.load_state_dict(T.load(self.checkpoint))
+
+        self.actor.load_models()
+
+        self.critic_eval.load_models()
+        self.critic_target = copy.deepcopy(self.critic_eval)
