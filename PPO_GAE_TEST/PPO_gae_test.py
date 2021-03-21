@@ -99,7 +99,7 @@ while frame_idx < max_frames:
     masks = []
     entropy = 0
 
-    for _ range(num_steps):
+    for _ in range(num_steps):
         state = torch.FloatTensor(state).to(device)
         dist, value = model(state)
 
