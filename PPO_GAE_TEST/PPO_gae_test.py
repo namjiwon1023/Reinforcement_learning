@@ -21,11 +21,11 @@ def init_weights(m):
 class ActorCritic(nn.Module):
     def __init__(self, num_inputs, num_outputs, hidden_size, std=0.0):
         super(ActorCritic, self).__init__()
-        self.critic = nn.Sequential(nn.Linear(num_inputs, hidden_size), nn_ReLU(),
+        self.critic = nn.Sequential(nn.Linear(num_inputs, hidden_size), nn.ReLU(),
                                     nn.Linear(hidden_size, 1))
         self.actor = nn.Sequential(nn.Linear(num_inputs, hidden_size), nn.ReLU(),
                                     nn.Linear(hidden_size, num_outputs))
-        self.log_std = nn.Parametsr(torch.ones(1, num_outputs) * std)
+        self.log_std = nn.Parameter(torch.ones(1, num_outputs) * std)
 
         self.apply(init_weights)
     def forward(self, x):
