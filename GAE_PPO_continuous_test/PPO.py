@@ -49,7 +49,7 @@ class PPOMemory:
 
 class ActorNetwork(nn.Module):
     def __init__(self, n_actions, input_dims, alpha,
-                hidden_size=256, max_log_std=2, min_log_std=-20, chkpt_dir='/home/nam/Reinforcement_learning/GAE_PPO'):
+                hidden_size=256, max_log_std=2, min_log_std=-20, chkpt_dir='/home/nam/Reinforcement_learning/GAE_PPO_continuous_test'):
         super(ActorNetwork, self).__init__()
         self.max_log_std = max_log_std
         self.min_log_std = min_log_std
@@ -71,7 +71,7 @@ class ActorNetwork(nn.Module):
         feature = self.feature(state)
         mu = self.mean(feature)
         log_std = self.log_std(feature)
-        log_std = T.clamp(log_std, self.min_log_std, self.max_log_std)
+        # log_std = T.clamp(log_std, self.min_log_std, self.max_log_std)
         std = T.exp(log_std)
         dist = Normal(mu, std)
 
@@ -142,6 +142,7 @@ class Agent:
         dist = self.actor(state)
         value = self.critic(state)
         action = dist.sample()
+        # print('action : ',action)
 
         # Transform the data
         prob = T.squeeze(dist.log_prob(action)).item()

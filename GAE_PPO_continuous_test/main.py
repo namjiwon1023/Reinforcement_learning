@@ -12,9 +12,12 @@ if __name__ == '__main__':
     agent = Agent(n_actions=env.action_space.shape[0], batch_size=batch_size,alpha=alpha,n_epochs=n_epochs,input_dims=env.observation_space.shape[0])
     n_games = 300
     figure_file = '/home/nam/Reinforcement_learning/GAE_PPO_continuous_test/Pendulum.png'
-    print('reward_range[0] : ',env.reward_range[0])
+    # print('reward_range[0] : ',env.reward_range[0])
     best_score = env.reward_range[0]
     score_history = []
+
+    # max_action = float(env.action_space.high[0])
+    # print('max_action : ',max_action)
 
     learn_iters = 0
     avg_score = 0
@@ -27,6 +30,7 @@ if __name__ == '__main__':
         while not done:
             env.render()
             action, prob, val = agent.choose_action(observation)
+            # print('action:',action)
             observation_, reward, done, info = env.step(action)
             n_steps += 1
             score += reward
