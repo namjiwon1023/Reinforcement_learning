@@ -6,8 +6,10 @@ import os
 from torch.distributions import Normal
 
 class ActorNetwork(nn.Module):
-    def __init__(self, n_states, n_actions, hidden_size, alpha, dirPath='/home/nam/Reinforcement_learning/PPO_GAE_NEW'):
+    def __init__(self, n_states, n_actions, hidden_size, alpha, min_log_std = -20, max_log_std = 2, dirPath='/home/nam/Reinforcement_learning/PPO_GAE_NEW'):
         super(ActorNetwork, self).__init__()
+        self.min_log_std = min_log_std
+        self.max_log_std = max_log_std
         self.feature = nn.Sequential(nn.Linear(n_states, hidden_size),
                                     nn.ReLU(),
                                     nn.Linear(hidden_size, hidden_size),
@@ -24,6 +26,7 @@ class ActorNetwork(nn.Module):
         feature = self.feature(state)
         mu = self.mean(feature)
         log_std = self.log_std(feature)
+        log_std = T.clamp(log_std, self.min_log_std, self.max_log_std)
         std = T.exp(log_std)
 
         dist = Normal(mu, std)

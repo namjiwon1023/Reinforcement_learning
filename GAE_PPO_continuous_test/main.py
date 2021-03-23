@@ -1,17 +1,22 @@
 import gym
 import numpy as np
-from PPO import Agent
+from PPO import PPOAgent
 from utils import plot_learning_curve
 
 if __name__ == '__main__':
-    env = gym.make('Pendulum-v0')
+    # env = gym.make('Pendulum-v0')
+    env = gym.make('LunarLander-v2')
     N = 20
     batch_size = 5
     n_epochs = 4
     alpha = 3e-4
-    agent = Agent(n_actions=env.action_space.shape[0], batch_size=batch_size,alpha=alpha,n_epochs=n_epochs,input_dims=env.observation_space.shape[0])
-    n_games = 300
-    figure_file = '/home/nam/Reinforcement_learning/GAE_PPO_continuous_test/Pendulum.png'
+    input_dims = env.observation_space.shape[0]
+    # n_actions = env.action_space.shape[0]
+    # print(env.action_space.shape[0])
+    # agent = PPOAgent(input_dims, n_actions, 0.99, alpha, 0.95, 0.2, batch_size, 2048, 4)
+    agent = PPOAgent(input_dims, 3, 0.99, alpha, 0.95, 0.2, batch_size, 2048, 4)
+    n_games = int(1e6)
+    figure_file = '/home/nam/Reinforcement_learning/GAE_PPO_continuous_test/LunarLander.png'
     # print('reward_range[0] : ',env.reward_range[0])
     best_score = env.reward_range[0]
     score_history = []

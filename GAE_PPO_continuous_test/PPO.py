@@ -48,7 +48,7 @@ class PPOMemory:
         self.vals = []
 
 class ActorNetwork(nn.Module):
-    def __init__(self, n_actions, input_dims, alpha,
+    def __init__(self,  input_dims, n_actions, alpha,
                 hidden_size=256, max_log_std=2, min_log_std=-20, chkpt_dir='/home/nam/Reinforcement_learning/GAE_PPO_continuous_test'):
         super(ActorNetwork, self).__init__()
         self.max_log_std = max_log_std
@@ -57,9 +57,11 @@ class ActorNetwork(nn.Module):
         self.feature = nn.Sequential(nn.Linear(input_dims, hidden_size),
                                     nn.ReLU())
         self.mean = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),nn.ReLU(),
             nn.Linear(hidden_size, n_actions)
         )
         self.log_std = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),nn.ReLU(),
             nn.Linear(hidden_size, n_actions)
         )
 
@@ -71,7 +73,7 @@ class ActorNetwork(nn.Module):
         feature = self.feature(state)
         mu = self.mean(feature)
         log_std = self.log_std(feature)
-        # log_std = T.clamp(log_std, self.min_log_std, self.max_log_std)
+        log_std = T.clamp(log_std, self.min_log_std, self.max_log_std)
         std = T.exp(log_std)
         dist = Normal(mu, std)
 
@@ -84,16 +86,16 @@ class ActorNetwork(nn.Module):
         self.load_state_dict(T.load(self.checkpoint_file))
 
 class CriticNetwork(nn.Module):
-    def __init__(self, input_dims, alpha, fc1_dims=256, fc2_dims=256, chkpt_dir='/home/nam/Reinforcement_learning/GAE_PPO'):
+    def __init__(self, input_dims, alpha, hidden_size=256, chkpt_dir='/home/nam/Reinforcement_learning/GAE_PPO'):
         super(CriticNetwork, self).__init__()
 
         self.checkpoint_file = os.path.join(chkpt_dir, 'critic_torch_ppo')
         self.critic = nn.Sequential(
-            nn.Linear(input_dims, fc1_dims),
+            nn.Linear(input_dims, hidden_size),
             nn.ReLU(),
-            nn.Linear(fc1_dims, fc2_dims),
+            nn.Linear(hidden_size, hidden_size),
             nn.ReLU(),
-            nn.Linear(fc2_dims, 1)
+            nn.Linear(hidden_size, 1)
         )
 
         self.optimizer = optim.Adam(self.parameters(), lr=alpha)
@@ -101,6 +103,7 @@ class CriticNetwork(nn.Module):
         self.to(self.device)
 
     def forward(self, state):
+
         value = self.critic(state)
 
         return value
@@ -111,15 +114,17 @@ class CriticNetwork(nn.Module):
     def load_checkpoint(self):
         self.load_state_dict(T.load(self.checkpoint_file))
 
-class Agent:
-    def __init__(self, n_actions, input_dims, gamma=0.99, alpha=0.0003, gae_lambda=0.95,
+class PPOAgent:
+    def __init__(self, input_dims, n_actions, gamma=0.99, alpha=0.0003, gae_lambda=0.95,
                     policy_clip=0.2, batch_size=64, N=2048, n_epochs=10):
         self.gamma = gamma
         self.policy_clip = policy_clip
         self.n_epochs = n_epochs
         self.gae_lambda = gae_lambda
 
-        self.actor = ActorNetwork(n_actions, input_dims, alpha)
+        self.n_actions = n_actions
+
+        self.actor = ActorNetwork(input_dims, n_actions, alpha)
         self.critic = CriticNetwork(input_dims, alpha)
         self.memory = PPOMemory(batch_size)
 
@@ -137,19 +142,27 @@ class Agent:
         self.critic.load_checkpoint()
 
     def choose_action(self, observation):
-        state = T.tensor([observation], dtype=T.float).to(self.actor.device)
-
+        # print('obs shape : ',observation)
+        # state = T.tensor([observation], dtype=T.float).to(self.actor.device)
+        state = T.FloatTensor(observation).to(self.actor.device)
+        # print('state shape : ',state.size())
+        # print('state  : ',state)
+        # state = T.unsqueeze(T.FloatTensor([observation]).to(self.actor.device), dim=0)
+        # state = observation
         dist = self.actor(state)
         value = self.critic(state)
         action = dist.sample()
         # print('action : ',action)
 
         # Transform the data
-        prob = T.squeeze(dist.log_prob(action)).item()
-        action = T.squeeze(action).item()
-        value = T.squeeze(value).item()
+        prob = dist.log_prob(action)
+        # prob = dist.log_prob(action)
+        # print('prob shape', prob.size())
+        # print('prob', prob)
+        # action = T.squeeze(action).item()
+        value = value.item()
 
-        return action, prob, value
+        return action.cpu().numpy(), prob.cpu().detach().numpy(), value
 
     def learn(self):
         for _ in range(self.n_epochs):
@@ -165,18 +178,28 @@ class Agent:
                     a_t += discount*(reward_arr[k] + self.gamma*values[k+1]*(1-int(done_arr[k])) - values[k])
                     discount *= self.gamma*self.gae_lambda
                 advantage[t] = a_t
-            advantage=T.tensor(advantage).to(self.actor.device)
+            # advantage=T.tensor(advantage).to(self.actor.device)
+            advantage=T.FloatTensor(advantage).to(self.actor.device)
 
-            values = T.tensor(values).to(self.actor.device)
+            # values = T.tensor(values).to(self.actor.device)
+            values = T.FloatTensor(values).to(self.actor.device)
+            # print('values', values)
             for batch in batches:
-                states = T.tensor(state_arr[batch], dtype=T.float).to(self.actor.device)
-                old_probs = T.tensor(old_prob_arr[batch]).to(self.actor.device)
-                actions = T.tensor(action_arr[batch]).to(self.actor.device)
+                # states = T.tensor(state_arr[batch], dtype=T.float).to(self.actor.device)
+                states = T.FloatTensor(state_arr[batch]).to(self.actor.device)
+                # old_probs = T.tensor(old_prob_arr[batch]).to(self.actor.device)
+                old_probs = T.FloatTensor(old_prob_arr[batch]).to(self.actor.device)
+                # actions = T.tensor(action_arr[batch]).to(self.actor.device)
+                actions = T.FloatTensor(action_arr[batch]).reshape(-1, self.n_actions).to(self.actor.device)
+                # actions = action_arr[batch]
 
                 dist = self.actor(states)
                 critic_value = self.critic(states)
+                # print('critic_value', critic_value)
 
                 critic_value = T.squeeze(critic_value)
+                # print('critic_value', critic_value)
+                entropy = dist.entropy().mean()
 
                 new_probs = dist.log_prob(actions)
                 prob_ratio = new_probs.exp() / old_probs.exp()
@@ -186,10 +209,11 @@ class Agent:
                 actor_loss = -T.min(weighted_probs, weighted_clipped_probs).mean()
 
                 returns = advantage[batch] + values[batch]
+                #print('returns',returns)
                 critic_loss = (returns-critic_value)**2
                 critic_loss = critic_loss.mean()
 
-                total_loss = actor_loss + 0.5*critic_loss
+                total_loss = actor_loss + 0.5*critic_loss - 0.001*entropy
                 self.actor.optimizer.zero_grad()
                 self.critic.optimizer.zero_grad()
                 total_loss.backward()
