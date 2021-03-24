@@ -46,6 +46,19 @@ class SACAgent:
 
         self.transition = list()
 
+        # BC
+        self.store_memory_batch_size = 128
+        lambda1 = 1e-3
+        lambda2 = 1.0
+        self.lambda1 = lambda1
+        self.lambda2 = lambda2 / self.store_memory_batch_size
+        self.store_memory = np.load('store_memory.npy',allow_pickle = True)
+        # print(self.store_memory.shape)
+        # self.store_memory = self.store_memory[-1000 :]
+
+        self.memory_backup = ReplayBuffer(len(self.store_memory), self.n_states, self.n_actions, self.store_memory_batch_size)
+        self.memory_backup.store_with_store_memory(self.store_memory)
+
     def choose_action(self, state):
         # print('state : ',state)
         action, _ = self.actor(T.unsqueeze(T.FloatTensor(state),0).to(self.actor.device))
@@ -70,6 +83,15 @@ class SACAgent:
         done = T.FloatTensor(samples["done"]).reshape(-1, 1).to(self.actor.device)
         mask = (1 - done).to(self.actor.device)
 
+        samples_b = self.memory_backup.sample_batch()
+        state_b = T.FloatTensor(samples_b["state"]).to(self.actor.device)
+        next_state_b = T.FloatTensor(samples_b["next_state"]).to(self.actor.device)
+        action_b = T.FloatTensor(samples_b["action"]).reshape(-1, 3).to(self.actor.device)
+        reward_b = T.FloatTensor(samples_b["reward"]).reshape(-1, 1).to(self.actor.device)
+        done = T.FloatTensor(samples_b["done"]).reshape(-1, 1).to(self.actor.device)
+
+
+
         # critic update
         with T.no_grad():
             next_action, next_log_prob = self.actor(next_state)
@@ -89,8 +111,24 @@ class SACAgent:
         new_action, new_log_prob = self.actor(state)
         q_1, q_2 = self.critic_eval(state, new_action)
         q = T.min(q_1, q_2)
-        actor_loss = (self.alpha * new_log_prob - q).mean()
+        pg_loss = (self.alpha * new_log_prob - q).mean()
         alpha_loss = -self.log_alpha * (new_log_prob.detach() + self.target_entropy).mean()
+
+        pred_action, _ = self.actor(state_b)
+        q_t = T.min(*self.critic_eval(state_b, action_b))
+        q_e = T.min(*self.critic_eval(state_b, pred_action))
+        qf_mask = T.gt(q_t, q_e).to(self.critic_eval.device)
+        qf_mask = qf_mask.float()
+        n_qf_mask = int(qf_mask.sum().item())
+
+        if n_qf_mask == 0:
+            bc_loss = T.zeros(1, device=device)
+        else:
+            bc_loss = (
+                T.mul(pred_action, qf_mask) - T.mul(action_b, qf_mask)
+            ).pow(2).sum() / n_qf_mask
+
+        actor_loss = self.lambda1 * pg_loss + self.lambda2 * bc_loss
 
         self.actor.optimizer.zero_grad()
         actor_loss.backward()
@@ -158,7 +196,7 @@ if __name__ == "__main__":
     env = TorcsEnv(vision = agent.vision, throttle = True, gear_change = False)
     avg_score = 0
     scores = []
-    transitions = []
+    # transitions = []
 
     # Train Process
     for e in range(1, EPISODE_COUNT + 1):
@@ -173,8 +211,8 @@ if __name__ == "__main__":
 
         score = 0.
 
-        # np.savetxt("./reward.txt",scores, delimiter=",")
-        np.save('store_memory.npy',transitions)
+        np.savetxt("./BC_reward.txt",scores, delimiter=",")
+        # np.save('store_memory.npy',transitions)
 
         for i in range(MAX_STEPS):
             action = agent.choose_action(state)
@@ -187,7 +225,7 @@ if __name__ == "__main__":
             agent.transition += [r, state_, done]
             # print('memory_one_step : ', agent.transition)
             agent.memory.store(*agent.transition)
-            transitions.append(agent.transition)
+            # transitions.append(agent.transition)
 
             agent.learn()
 
@@ -214,11 +252,11 @@ if __name__ == "__main__":
         plt.grid(True)
         plt.xlabel("Episode_Reward")
         plt.ylabel("Total reward")
-        plt.plot(scores, "r-", linewidth=1.5, label="SAC_Episode_Reward")
-        plt.plot(z, running_avg, "b-", linewidth=1.5, label="SAC_Avg_Reward")
+        plt.plot(scores, "r-", linewidth=1.5, label="SAC_BC_Episode_Reward")
+        plt.plot(z, running_avg, "b-", linewidth=1.5, label="SAC_BC_Avg_Reward")
         plt.legend(loc="best", shadow=True)
         plt.pause(0.1)
-        plt.savefig('./SAC_TORCS.jpg')
+        plt.savefig('./SAC_BC_TORCS.jpg')
         plt.show()
 
     env.end()

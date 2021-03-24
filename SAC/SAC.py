@@ -82,13 +82,11 @@ class SACAgent:
 
         self.transition = list()
 
-        self.total_step = 0
-
     def choose_action(self, state):
-        if (self.total_step < self.train_start) and not self.test_mode:
+        if (self.total_episode < self.train_start) and not self.test_mode:
             action = self.env.action_space.sample()
         else:
-            action = self.actor(T.FloatTensor(state).to(device))[0].detach().cpu().numpy()
+            action, _ = self.actor(T.FloatTensor(state).to(device))[0].detach().cpu().numpy()
         self.transition = [state, action]
         return action
 
@@ -127,7 +125,7 @@ class SACAgent:
         v_target = q_pred - alpha * log_prob
         vf_loss = F.mse_loss(v_pred, v_target.detach())
 
-        if self.total_step % self.update_time == 0 :
+        if self.total_episode % self.update_time == 0 :
             advantage = q_pred - v_pred.detach()
             actor_loss = (alpha * log_prob - advantage).mean()
 

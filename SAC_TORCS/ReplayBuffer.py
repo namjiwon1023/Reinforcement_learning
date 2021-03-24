@@ -23,6 +23,10 @@ class ReplayBuffer:
         self.size = min(self.size + 1, self.max_size)
         self.count += 1
 
+    def store_with_store_memory(self, transitions):
+        for t in transitions:
+            self.store(*t)
+
     def sample_batch(self):
         if self.count < self.batch_size:
             index = np.random.choice(self.size, self.count)
