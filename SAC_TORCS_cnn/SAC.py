@@ -2,16 +2,12 @@ import copy
 import random
 import os
 from gym_torcs import TorcsEnv
-
 import numpy as np
-
 import torch as T
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-
 import matplotlib.pyplot as plt
-
 from Actor import ActorNetwork
 from Critic import CriticNetwork
 from ReplayBuffer import ReplayBuffer
@@ -47,10 +43,10 @@ class SACAgent:
         self.transition = list()
 
     def choose_action(self, state):
-        # print('state : ',state)
+
         action, _ = self.actor(T.unsqueeze(T.FloatTensor(state),0).to(self.actor.device))
         action = action.cpu().detach().numpy()
-        # print('action : ', action[0])
+
 
         self.transition = [state, action[0]]
         return action
@@ -137,11 +133,12 @@ if __name__ == "__main__":
                 'vision' : True,
 }
     agent = SACAgent(**params)
-    sac_actor_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS/sac_actor'
-    sac_actor_optimizer_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS/sac_actor_optimizer'
-    sac_critic_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS/sac_critic'
-    sac_critic_optimizer_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS/sac_critic_optimizer'
-    alpha_optimizer_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS/alpha_optimizer'
+    sac_actor_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn/sac_actor'
+    sac_actor_optimizer_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn/sac_actor_optimizer'
+    sac_critic_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn/sac_critic'
+    sac_critic_optimizer_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn/sac_critic_optimizer'
+    alpha_optimizer_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn/alpha_optimizer'
+    reward_file = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn/reward.txt'
     if os.path.exists(sac_actor_parameter) and os.path.exists(sac_actor_optimizer_parameter) and os.path.exists(sac_critic_parameter) and os.path.exists(sac_critic_optimizer_parameter) and os.path.exists(alpha_optimizer_parameter):
         agent.load_models()
     else:
@@ -154,7 +151,7 @@ if __name__ == "__main__":
     EPISODE_COUNT = int(1e6)
     MAX_STEPS = 100000
     best_score = 0
-    # Environment Setting
+
     env = TorcsEnv(vision = agent.vision, throttle = True, gear_change = False)
     avg_score = 0
     scores = []
@@ -170,15 +167,14 @@ if __name__ == "__main__":
 
         state = ob.img
 
+        step = 0
         score = 0.
 
         np.savetxt("./reward.txt",scores, delimiter=",")
 
-
         for i in range(MAX_STEPS):
             action = agent.choose_action(state)
-            # print('action:',action)
-            # print('action[0] : ',action[0])
+
             ob, r, done, _ = env.step(action[0])
 
             state_ = ob.img
@@ -188,13 +184,14 @@ if __name__ == "__main__":
 
             agent.learn()
 
+            step += 1
             score += r
             state = state_
-            print('Episode : {} Action : {} Reward : {}'.format(e, action[0], r))
+
+            print('Episode : {} | Action : {} | Reward : {}'.format(e, action[0], r))
             if done :
-
                 scores.append(score)
-
+                print('Episode : {} | Step : {} | Reward : {}'.format(e, step, score))
                 break
 
         avg_score = np.mean(scores[-10:])
