@@ -10,7 +10,7 @@ import numpy as np
 
 
 class ActorNetwork(nn.Module):
-    def __init__(self, in_dims, n_actions, alpha, hidden_size = 512, min_log_std = -20, max_log_std = 2,
+    def __init__(self, in_dims, n_actions, alpha, n_sensors, hidden_size = 512, min_log_std = -20, max_log_std = 2,
                 dirPath='/home/nam/Reinforcement_learning/SAC_TORCS_cnn', test_mode=False, with_logprob=True):
         super(ActorNetwork, self).__init__()
         self.test_mode = test_mode
@@ -29,7 +29,12 @@ class ActorNetwork(nn.Module):
 
         self.hidden_layer = nn.Sequential(nn.Linear(64*4*4, hidden_size),
                                             nn.ReLU())
-
+        # self.hidden_layer_1 = nn.Sequential(nn.Linear(64*4*4 + n_sensors, hidden_size),
+        #                                     nn.ReLU())
+        # self.hidden_layer_2 = nn.Sequential(nn.Linear(n_sensors, hidden_size),
+        #                                     nn.ReLU())
+        # self.hidden_layer_3 = nn.Sequential(nn.Linear(hidden_size, hidden_size),
+        #                                     nn.ReLU())
 
         self.mean = nn.Sequential(nn.Linear(hidden_size, n_actions))
         self.log_std = nn.Sequential(nn.Linear(hidden_size, n_actions))
@@ -42,8 +47,14 @@ class ActorNetwork(nn.Module):
     def forward(self, state):
         feature = self.feature(state)
         feature = feature.view(-1, 64*4*4)
+        # cat = T.cat((feature, sensors), dim=-1)
+        # feature = self.hidden_layer_1(feature)
+        # sensors = self.hidden_layer_2(sensors)
+        # cat = self.hidden_layer_1(cat)
         feature = self.hidden_layer(feature)
 
+        # cat = feature + sensors
+        # cat = self.hidden_layer_3(cat)
         mu = self.mean(feature)
         log_std = self.log_std(feature)
         log_std = T.clamp(log_std, self.min_log_std, self.max_log_std)

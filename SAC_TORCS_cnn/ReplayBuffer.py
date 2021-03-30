@@ -5,8 +5,13 @@ class ReplayBuffer:
         self.in_dims = in_dims
         self.img_w = 64
         self.img_h = 64
+
         self.state = np.zeros([memory_size, self.in_dims, self.img_w, self.img_h], dtype=np.float32)
         self.next_state = np.zeros([memory_size, self.in_dims, self.img_w, self.img_h], dtype=np.float32)
+
+        # self.sensor_state = np.zeros([memory_size, n_sensors], dtype=np.float32)
+        # self.next_sensor_state = np.zeros([memory_size, n_sensors], dtype=np.float32)
+
         self.action = np.zeros([memory_size, n_actions],dtype=np.float32)
         self.reward = np.zeros([memory_size], dtype=np.float32)
         self.done = np.zeros([memory_size], dtype=np.float32)
@@ -17,9 +22,11 @@ class ReplayBuffer:
 
     def store(self, state, action, reward, next_state, done):
         self.state[self.ptr] = state
+        # self.sensor_state[self.ptr] = sensor_state
         self.action[self.ptr] = action
         self.reward[self.ptr] = reward
         self.next_state[self.ptr] = next_state
+        # self.next_sensor_state[self.ptr] = next_sensor_state
         self.done[self.ptr] = done
 
         self.ptr = (self.ptr + 1) % self.max_size
@@ -40,7 +47,10 @@ class ReplayBuffer:
                     action = self.action[index],
                     reward = self.reward[index],
                     next_state = self.next_state[index],
-                    done = self.done[index])
+                    done = self.done[index],
+                    # sensor_state = self.sensor_state[index],
+                    # next_sensor_state = self.next_sensor_state[index],
+                    )
 
     def __len__(self):
         return self.size

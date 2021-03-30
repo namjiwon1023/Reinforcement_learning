@@ -12,7 +12,23 @@ from Actor import ActorNetwork
 from Critic import CriticNetwork
 from ReplayBuffer import ReplayBuffer
 
+if T.backends.cudnn.enabled:
+    T.backends.cudnn.benchmark = False
+    T.backends.cudnn.deterministic = True
+seed = 123
+T.cuda.manual_seed(seed)
+T.manual_seed(seed)
+np.random.seed(seed)
+random.seed(seed)
+
 device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+print('Using GPU : ', T.cuda.is_available() , ' |  Seed : ', seed)
+
+
+def _layer_norm(m, std=1.0, bias_const=1e-6):   # bias_const = 1e-6
+    if isinstance(m, nn.Linear):
+        T.nn.init.orthogonal_(m.weight, std)
+        T.nn.init.constant_(m.bias, bias_const)
 
 class SACAgent:
     def __init__(self, **kwargs):
@@ -22,7 +38,7 @@ class SACAgent:
         self.checkpoint = os.path.join(dirPath,'alpha_optimizer')
 
         self.in_dims = 3
-        self.n_states = 29
+        self.n_sensors = 29
         self.n_actions = 3
 
         self.memory = ReplayBuffer(self.memory_size, self.in_dims, self.n_actions, self.batch_size)
@@ -32,9 +48,11 @@ class SACAgent:
         self.alpha = self.log_alpha.exp()
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=self.learning_rate)
 
-        self.actor = ActorNetwork(self.in_dims, self.n_actions, self.learning_rate)
+        self.actor = ActorNetwork(self.in_dims, self.n_actions, self.learning_rate, self.n_sensors)
+        self.actor.apply(_layer_norm)
 
-        self.critic_eval = CriticNetwork(self.in_dims, self.n_actions, self.learning_rate)
+        self.critic_eval = CriticNetwork(self.in_dims, self.n_actions, self.learning_rate, self.n_sensors)
+        self.critic_eval.apply(_layer_norm)
         self.critic_target = copy.deepcopy(self.critic_eval)
         self.critic_target.eval()
         for p in self.critic_target.parameters():
@@ -45,9 +63,10 @@ class SACAgent:
     def choose_action(self, state):
 
         action, _ = self.actor(T.unsqueeze(T.FloatTensor(state),0).to(self.actor.device))
+        # action[0][0] = T.clamp(action[0][0], -1, 1)
+        # action[0][1] = T.clamp(action[0][1], 0, 1)
+        # action[0][2] = T.clamp(action[0][2], 0, 1)
         action = action.cpu().detach().numpy()
-
-
         self.transition = [state, action[0]]
         return action
 
@@ -61,6 +80,8 @@ class SACAgent:
         samples = self.memory.sample_batch()
         state = T.FloatTensor(samples["state"]).to(self.actor.device)
         next_state = T.FloatTensor(samples["next_state"]).to(self.actor.device)
+        # sensor_state = T.FloatTensor(samples["sensor_state"]).to(self.actor.device)
+        # next_sensor_state = T.FloatTensor(samples["next_sensor_state"]).to(self.actor.device)
         action = T.FloatTensor(samples["action"]).reshape(-1, self.n_actions).to(self.actor.device)
         reward = T.FloatTensor(samples["reward"]).reshape(-1, 1).to(self.actor.device)
         done = T.FloatTensor(samples["done"]).reshape(-1, 1).to(self.actor.device)
@@ -123,7 +144,7 @@ class SACAgent:
 if __name__ == "__main__":
 
     params = {
-                'GAMMA' : 0.99,
+                'GAMMA' : 0.98,
                 'learning_rate' : 3e-4,
                 'tau' : 0.005,
                 'update_time' : 1,
@@ -146,7 +167,7 @@ if __name__ == "__main__":
 
 
     plt.ion()
-    plt.figure(figsize=(20, 5))
+    plt.figure(figsize=(15, 5))
 
     EPISODE_COUNT = int(1e6)
     MAX_STEPS = 100000
@@ -166,6 +187,7 @@ if __name__ == "__main__":
             ob = env.reset()
 
         state = ob.img
+        # sensor_state = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY,  ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
 
         step = 0
         score = 0.
@@ -178,6 +200,7 @@ if __name__ == "__main__":
             ob, r, done, _ = env.step(action[0])
 
             state_ = ob.img
+            # sensor_state_ = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY,  ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
 
             agent.transition += [r, state_, done]
             agent.memory.store(*agent.transition)
