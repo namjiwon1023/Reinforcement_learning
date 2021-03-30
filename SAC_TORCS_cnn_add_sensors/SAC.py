@@ -34,14 +34,14 @@ class SACAgent:
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
-        dirPath='/home/nam/Reinforcement_learning/SAC_TORCS_cnn'
+        dirPath='/home/nam/Reinforcement_learning/SAC_TORCS_cnn_add_sensors'
         self.checkpoint = os.path.join(dirPath,'alpha_optimizer')
 
         self.in_dims = 3
         self.n_sensors = 29
         self.n_actions = 3
 
-        self.memory = ReplayBuffer(self.memory_size, self.in_dims, self.n_actions, self.batch_size)
+        self.memory = ReplayBuffer(self.memory_size, self.in_dims, self.n_actions, self.n_sensors, self.batch_size)
 
         self.target_entropy = -self.n_actions
         self.log_alpha = T.zeros(1, requires_grad=True, device=device)
@@ -60,14 +60,12 @@ class SACAgent:
 
         self.transition = list()
 
-    def choose_action(self, state):
+    def choose_action(self, state, sensor):
 
-        action, _ = self.actor(T.unsqueeze(T.FloatTensor(state),0).to(self.actor.device))
-        # action[0][0] = T.clamp(action[0][0], -1, 1)
-        # action[0][1] = T.clamp(action[0][1], 0, 1)
-        # action[0][2] = T.clamp(action[0][2], 0, 1)
+        action, _ = self.actor(T.unsqueeze(T.FloatTensor(state),0).to(self.actor.device), T.unsqueeze(T.FloatTensor(sensor),0).to(self.actor.device))
+
         action = action.cpu().detach().numpy()
-        self.transition = [state, action[0]]
+        self.transition = [state, sensor, action[0]]
         return action
 
     def target_soft_update(self):
@@ -80,8 +78,8 @@ class SACAgent:
         samples = self.memory.sample_batch()
         state = T.FloatTensor(samples["state"]).to(self.actor.device)
         next_state = T.FloatTensor(samples["next_state"]).to(self.actor.device)
-        # sensor_state = T.FloatTensor(samples["sensor_state"]).to(self.actor.device)
-        # next_sensor_state = T.FloatTensor(samples["next_sensor_state"]).to(self.actor.device)
+        sensor_state = T.FloatTensor(samples["sensor_state"]).to(self.actor.device)
+        next_sensor_state = T.FloatTensor(samples["next_sensor_state"]).to(self.actor.device)
         action = T.FloatTensor(samples["action"]).reshape(-1, self.n_actions).to(self.actor.device)
         reward = T.FloatTensor(samples["reward"]).reshape(-1, 1).to(self.actor.device)
         done = T.FloatTensor(samples["done"]).reshape(-1, 1).to(self.actor.device)
@@ -89,11 +87,11 @@ class SACAgent:
 
         # critic update
         with T.no_grad():
-            next_action, next_log_prob = self.actor(next_state)
-            q1_target, q2_target = self.critic_target(next_state, next_action)
+            next_action, next_log_prob = self.actor(next_state, next_sensor_state)
+            q1_target, q2_target = self.critic_target(next_state, next_action, next_sensor_state)
             q_target = T.min(q1_target, q2_target)
             value_target = reward + self.GAMMA * (q_target - self.alpha * next_log_prob)
-        q1_eval, q2_eval = self.critic_eval(state, action)
+        q1_eval, q2_eval = self.critic_eval(state, action, sensor_state)
         critic_loss = F.mse_loss(q1_eval, value_target) + F.mse_loss(q2_eval, value_target)
 
         self.critic_eval.optimizer.zero_grad()
@@ -103,8 +101,8 @@ class SACAgent:
         for p in self.critic_eval.parameters():
             p.requires_grad = False
 
-        new_action, new_log_prob = self.actor(state)
-        q_1, q_2 = self.critic_eval(state, new_action)
+        new_action, new_log_prob = self.actor(state, sensor_state)
+        q_1, q_2 = self.critic_eval(state, new_action, sensor_state)
         q = T.min(q_1, q_2)
         actor_loss = (self.alpha * new_log_prob - q).mean()
         alpha_loss = -self.log_alpha * (new_log_prob.detach() + self.target_entropy).mean()
@@ -144,22 +142,22 @@ class SACAgent:
 if __name__ == "__main__":
 
     params = {
-                'GAMMA' : 0.98,
-                'learning_rate' : 3e-4,
+                'GAMMA' : 0.99,
+                'learning_rate' : 2e-4,
                 'tau' : 0.005,
                 'update_time' : 1,
-                'memory_size' : int(1e6),
+                'memory_size' : int(2 ** 20),
                 'batch_size' : 256,
                 'total_episode' : 0,
                 'vision' : True,
 }
     agent = SACAgent(**params)
-    sac_actor_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn/sac_actor'
-    sac_actor_optimizer_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn/sac_actor_optimizer'
-    sac_critic_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn/sac_critic'
-    sac_critic_optimizer_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn/sac_critic_optimizer'
-    alpha_optimizer_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn/alpha_optimizer'
-    reward_file = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn/reward.txt'
+    sac_actor_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn_add_sensors/sac_actor'
+    sac_actor_optimizer_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn_add_sensors/sac_actor_optimizer'
+    sac_critic_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn_add_sensors/sac_critic'
+    sac_critic_optimizer_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn_add_sensors/sac_critic_optimizer'
+    alpha_optimizer_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn_add_sensors/alpha_optimizer'
+    reward_file = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn_add_sensors/reward.txt'
     if os.path.exists(sac_actor_parameter) and os.path.exists(sac_actor_optimizer_parameter) and os.path.exists(sac_critic_parameter) and os.path.exists(sac_critic_optimizer_parameter) and os.path.exists(alpha_optimizer_parameter):
         agent.load_models()
     else:
@@ -187,7 +185,7 @@ if __name__ == "__main__":
             ob = env.reset()
 
         state = ob.img
-        # sensor_state = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY,  ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
+        sensor_state = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY,  ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
 
         step = 0
         score = 0.
@@ -195,14 +193,14 @@ if __name__ == "__main__":
         np.savetxt("./reward.txt",scores, delimiter=",")
 
         for i in range(MAX_STEPS):
-            action = agent.choose_action(state)
+            action = agent.choose_action(state, sensor_state)
 
             ob, r, done, _ = env.step(action[0])
 
             state_ = ob.img
-            # sensor_state_ = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY,  ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
+            sensor_state_ = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY,  ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
 
-            agent.transition += [r, state_, done]
+            agent.transition += [r, state_, sensor_state_, done]
             agent.memory.store(*agent.transition)
 
             agent.learn()
@@ -210,11 +208,14 @@ if __name__ == "__main__":
             step += 1
             score += r
             state = state_
+            sensor_state = sensor_state_
 
             print('Episode : {} | Action : {} | Reward : {}'.format(e, action[0], r))
             if done :
                 scores.append(score)
+                print('--------------------------------------------------------------|')
                 print('Episode : {} | Step : {} | Reward : {}'.format(e, step, score))
+                print('--------------------------------------------------------------|')
                 break
 
         avg_score = np.mean(scores[-10:])

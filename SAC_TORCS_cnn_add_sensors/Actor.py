@@ -10,8 +10,8 @@ import numpy as np
 
 
 class ActorNetwork(nn.Module):
-    def __init__(self, in_dims, n_actions, alpha, n_sensors, hidden_size = 512, min_log_std = -20, max_log_std = 2,
-                dirPath='/home/nam/Reinforcement_learning/SAC_TORCS_cnn', test_mode=False, with_logprob=True):
+    def __init__(self, in_dims, n_actions, alpha, n_sensors, hidden_size = 256, min_log_std = -20, max_log_std = 2,
+                dirPath='/home/nam/Reinforcement_learning/SAC_TORCS_cnn_add_sensors', test_mode=False, with_logprob=True):
         super(ActorNetwork, self).__init__()
         self.test_mode = test_mode
         self.with_logprob = with_logprob
@@ -27,7 +27,7 @@ class ActorNetwork(nn.Module):
                                     nn.Conv2d(64, 64, kernel_size = 3, stride = 1),
                                     nn.ReLU())
 
-        self.hidden_layer = nn.Sequential(nn.Linear(64*4*4, hidden_size),
+        self.hidden_layer = nn.Sequential(nn.Linear(64*4*4 + n_sensors, hidden_size),
                                             nn.ReLU())
         # self.hidden_layer_1 = nn.Sequential(nn.Linear(64*4*4 + n_sensors, hidden_size),
         #                                     nn.ReLU())
@@ -44,19 +44,20 @@ class ActorNetwork(nn.Module):
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
-    def forward(self, state):
+    def forward(self, state, sensors):
         feature = self.feature(state)
         feature = feature.view(-1, 64*4*4)
+        cat = T.cat((feature, sensors), dim=-1)
         # cat = T.cat((feature, sensors), dim=-1)
         # feature = self.hidden_layer_1(feature)
         # sensors = self.hidden_layer_2(sensors)
         # cat = self.hidden_layer_1(cat)
-        feature = self.hidden_layer(feature)
+        cat = self.hidden_layer(cat)
 
         # cat = feature + sensors
         # cat = self.hidden_layer_3(cat)
-        mu = self.mean(feature)
-        log_std = self.log_std(feature)
+        mu = self.mean(cat)
+        log_std = self.log_std(cat)
         log_std = T.clamp(log_std, self.min_log_std, self.max_log_std)
         std = T.exp(log_std)
 
