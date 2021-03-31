@@ -38,7 +38,6 @@ class SACAgent:
         self.checkpoint = os.path.join(dirPath,'alpha_optimizer')
 
         self.in_dims = 3
-        self.n_sensors = 29
         self.n_actions = 3
 
         self.memory = ReplayBuffer(self.memory_size, self.in_dims, self.n_actions, self.batch_size)
@@ -48,10 +47,10 @@ class SACAgent:
         self.alpha = self.log_alpha.exp()
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=self.learning_rate)
 
-        self.actor = ActorNetwork(self.in_dims, self.n_actions, self.learning_rate, self.n_sensors)
+        self.actor = ActorNetwork(self.in_dims, self.n_actions, self.learning_rate)
         self.actor.apply(_layer_norm)
 
-        self.critic_eval = CriticNetwork(self.in_dims, self.n_actions, self.learning_rate, self.n_sensors)
+        self.critic_eval = CriticNetwork(self.in_dims, self.n_actions, self.learning_rate)
         self.critic_eval.apply(_layer_norm)
         self.critic_target = copy.deepcopy(self.critic_eval)
         self.critic_target.eval()
@@ -63,9 +62,6 @@ class SACAgent:
     def choose_action(self, state):
 
         action, _ = self.actor(T.unsqueeze(T.FloatTensor(state),0).to(self.actor.device))
-        # action[0][0] = T.clamp(action[0][0], -1, 1)
-        # action[0][1] = T.clamp(action[0][1], 0, 1)
-        # action[0][2] = T.clamp(action[0][2], 0, 1)
         action = action.cpu().detach().numpy()
         self.transition = [state, action[0]]
         return action
@@ -80,8 +76,6 @@ class SACAgent:
         samples = self.memory.sample_batch()
         state = T.FloatTensor(samples["state"]).to(self.actor.device)
         next_state = T.FloatTensor(samples["next_state"]).to(self.actor.device)
-        # sensor_state = T.FloatTensor(samples["sensor_state"]).to(self.actor.device)
-        # next_sensor_state = T.FloatTensor(samples["next_sensor_state"]).to(self.actor.device)
         action = T.FloatTensor(samples["action"]).reshape(-1, self.n_actions).to(self.actor.device)
         reward = T.FloatTensor(samples["reward"]).reshape(-1, 1).to(self.actor.device)
         done = T.FloatTensor(samples["done"]).reshape(-1, 1).to(self.actor.device)
@@ -187,7 +181,6 @@ if __name__ == "__main__":
             ob = env.reset()
 
         state = ob.img
-        # sensor_state = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY,  ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
 
         step = 0
         score = 0.
@@ -200,7 +193,6 @@ if __name__ == "__main__":
             ob, r, done, _ = env.step(action[0])
 
             state_ = ob.img
-            # sensor_state_ = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY,  ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
 
             agent.transition += [r, state_, done]
             agent.memory.store(*agent.transition)
