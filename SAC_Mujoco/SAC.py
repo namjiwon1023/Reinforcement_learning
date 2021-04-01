@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import numpy as np
 import copy
 import gym
+from gym.wrappers import RescaleAction
 import random
 
 from ReplayBuffer import ReplayBuffer
@@ -59,13 +60,14 @@ class SACAgent:
         dirPath='/home/nam/Reinforcement_learning/SAC_Mujoco'
         self.checkpoint = os.path.join(dirPath,'alpha_optimizer')
 
-        self.env = gym.make('Walker2d-v3')
+        self.env = gym.make('Walker2d-v2')
+        self.env = RescaleAction(self.env, -1, 1)
         # self.env = ActionNormalizer(self.env)
 
         self.n_states = self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.shape[0]
-        self.max_action = float(self.env.action_space.high[0])
-        # self.max_action = 1
+        # self.max_action = float(self.env.action_space.high[0])
+        self.max_action = 1
 
         self.memory = ReplayBuffer(self.memory_size, self.n_states, self.n_actions, self.batch_size)
 
@@ -96,7 +98,7 @@ class SACAgent:
         #     action, _ = self.actor(T.FloatTensor(state).to(self.actor.device))[0].detach().cpu().numpy()
 
 
-        if self.total_episode < self.train_start:
+        if self.time_step < self.random_action:
             action = self.env.action_space.sample()
         else:
             action, _ = self.actor(T.FloatTensor(state).to(self.actor.device))
@@ -154,7 +156,7 @@ class SACAgent:
 
         self.alpha = self.log_alpha.exp()
 
-        if self.total_episode % self.update_time == 0 :
+        if self.time_step % self.update_time == 0 :
             self.target_soft_update()
 
     def save_models(self):

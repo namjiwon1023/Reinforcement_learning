@@ -22,9 +22,10 @@ if __name__ == '__main__':
                 'memory_size' : int(1e6),
                 'batch_size' : 256,
                 'learn_step' : 0,
-                'total_episode' : 0,
-                'train_start' : 10000,
+                'time_step' : 0,
+                'train_start' : 1000,
                 'test_mode' : False,
+                'random_action' : 10000,
 }
 
     agent = SACAgent(**params)
@@ -56,14 +57,13 @@ if __name__ == '__main__':
     for i in range(1, n_games + 1):
         state = agent.env.reset()
         # print('state : ', state)
-        agent.total_episode = i
-
         done = False
         score = 0
 
         np.savetxt("./Total_scores.txt",scores, delimiter=",")
 
         while not done:
+            agent.time_step += 1
             agent.env.render()
             action = agent.choose_action(state)
             next_state, reward, done, _ = agent.env.step(action)
@@ -73,7 +73,7 @@ if __name__ == '__main__':
             score += reward
             agent.transition += [reward, next_state, done]
             agent.memory.store(*agent.transition)
-            if (len(agent.memory) >= agent.batch_size and agent.total_episode > agent.train_start):
+            if (len(agent.memory) >= agent.batch_size and agent.time_step > agent.train_start):
                 agent.learn()
                 learn_iters += 1
             state = next_state
