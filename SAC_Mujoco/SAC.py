@@ -59,7 +59,7 @@ class SACAgent:
         dirPath='/home/nam/Reinforcement_learning/SAC_Mujoco'
         self.checkpoint = os.path.join(dirPath,'alpha_optimizer')
 
-        self.env = gym.make('HalfCheetah-v3')
+        self.env = gym.make('Walker2d-v3')
         # self.env = ActionNormalizer(self.env)
 
         self.n_states = self.env.observation_space.shape[0]

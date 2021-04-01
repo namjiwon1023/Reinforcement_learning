@@ -23,7 +23,7 @@ if __name__ == '__main__':
                 'batch_size' : 256,
                 'learn_step' : 0,
                 'total_episode' : 0,
-                'train_start' : 1000,
+                'train_start' : 10000,
                 'test_mode' : False,
 }
 
@@ -41,7 +41,7 @@ if __name__ == '__main__':
         print('------ No parameters available! ------')
 
     n_games = int(1e6)
-    figure_file = '/home/nam/Reinforcement_learning/SAC_Mujoco/HalfCheetah-v3.png'
+    figure_file = '/home/nam/Reinforcement_learning/SAC_Mujoco/Walker2d-v3.png'
     best_score = agent.env.reward_range[0]
     scores = []
     # N = 20
@@ -50,7 +50,7 @@ if __name__ == '__main__':
     n_steps = 0
 
     plt.ion()
-    plt.figure(figsize=(15, 5))
+    plt.figure(figsize=(10, 5))
 
 
     for i in range(1, n_games + 1):
