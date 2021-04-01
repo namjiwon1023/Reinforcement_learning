@@ -5,11 +5,13 @@ import os
 import random
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.distributions import Normal
+from torch.distributions import Normal, TransformedDistribution
+
+from utils2 import ReplayPool, TanhTransform
 import numpy as np
 
 class ActorNetwork(nn.Module):
-    def __init__(self, n_states, n_actions, max_action, alpha, n_hidden=128, min_log_std = -20, max_log_std = 2,test_mode=False, with_logprob=True,
+    def __init__(self, n_states, n_actions, max_action, alpha, n_hidden=256, min_log_std = -20, max_log_std = 2,test_mode=False, with_logprob=True,
                     dirPath='/home/nam/Reinforcement_learning/SAC_Mujoco'):
         super(ActorNetwork, self).__init__()
         self.test_mode = test_mode
@@ -20,6 +22,8 @@ class ActorNetwork(nn.Module):
         self.checkpoint = os.path.join(dirPath, 'sac_actor')
 
         self.feature = nn.Sequential(nn.Linear(n_states, n_hidden),
+                                    nn.ReLU(),
+                                    nn.Linear(n_hidden, n_hidden),
                                     nn.ReLU(),
                                     nn.Linear(n_hidden, n_hidden),
                                     nn.ReLU())
@@ -42,6 +46,9 @@ class ActorNetwork(nn.Module):
         std = T.exp(log_std)
 
         dist = Normal(mu, std)
+        # transforms = [TanhTransform(cache_size=1)]
+        # dist = TransformedDistribution(dist, transforms)
+        # dist = dist.tanh()
         z = dist.rsample()
 
         if self.test_mode is True:
@@ -50,8 +57,10 @@ class ActorNetwork(nn.Module):
             action = z.tanh()
 
         if self.with_logprob is True:
-            log_prob = dist.log_prob(z) - T.log(1 - action.pow(2) + 1e-7)
+            log_prob = dist.log_prob(z)# - T.log(1 - action.pow(2) + 1e-7)
             log_prob = log_prob.sum(-1, keepdim=True)
+            # log_prob = dist.log_prob(z).sum(-1, keepdim=True)
+
         else:
             log_prob = None
 

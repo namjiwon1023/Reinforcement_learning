@@ -19,7 +19,7 @@ if T.backends.cudnn.enabled:
     T.backends.cudnn.benchmark = False
     T.backends.cudnn.deterministic = True
 
-seed = 123
+seed = 100
 T.manual_seed(seed)
 T.cuda.manual_seed(seed)
 np.random.seed(seed)

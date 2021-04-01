@@ -41,7 +41,7 @@ if __name__ == '__main__':
     else:
         print('------ No parameters available! ------')
 
-    n_games = int(1e6)
+    n_games = int(3e7)
     figure_file = '/home/nam/Reinforcement_learning/SAC_Mujoco/Walker2d-v3.png'
     best_score = agent.env.reward_range[0]
     max_steps = agent.env.spec.max_episode_steps
@@ -50,24 +50,25 @@ if __name__ == '__main__':
     learn_iters = 0
     avg_score = 0
     n_steps = 0
-
+    i_episode = 0
     plt.ion()
     plt.figure(figsize=(10, 5))
 
 
-    for i in range(1, n_games + 1):
+    # for i in range(1, n_games + 1):
+    while agent.time_step < n_games:
         state = agent.env.reset()
         # print('state : ', state)
         done = False
         score = 0
         step = 0
-
+        i_episode += 1
         np.savetxt("./Total_scores.txt",scores, delimiter=",")
 
-        while not done:
+        while (not done):
+            agent.env.render()
             step += 1
             agent.time_step += 1
-            agent.env.render()
             action = agent.choose_action(state)
             next_state, reward, done, _ = agent.env.step(action)
             real_done = False if step == max_steps else done
@@ -77,7 +78,8 @@ if __name__ == '__main__':
             score += reward
             agent.transition += [reward, next_state, real_done]
             agent.memory.store(*agent.transition)
-            if (len(agent.memory) >= agent.batch_size and agent.time_step > agent.train_start):
+            # if (len(agent.memory) >= agent.batch_size and agent.time_step > agent.train_start):
+            if n_steps % agent.update_time == 0 and n_steps > agent.train_start:
                 agent.learn()
                 learn_iters += 1
             state = next_state
@@ -88,7 +90,7 @@ if __name__ == '__main__':
             best_score = avg_score
             agent.save_models()
 
-        print('episode',i,'score %.1f' %score,'avg score %.1f' % avg_score, 'time_steps',n_steps, 'learning_step',learn_iters)
+        print('episode',i_episode,'score %.1f' %score,'avg score %.1f' % avg_score, 'time_steps',n_steps, 'learning_step',learn_iters)
 
         z = [c+1 for c in range(len(scores))]
         running_avg = np.zeros(len(scores))
