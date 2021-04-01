@@ -44,6 +44,7 @@ if __name__ == '__main__':
     n_games = int(1e6)
     figure_file = '/home/nam/Reinforcement_learning/SAC_Mujoco/Walker2d-v3.png'
     best_score = agent.env.reward_range[0]
+    max_steps = agent.env.spec.max_episode_steps
     scores = []
     # N = 20
     learn_iters = 0
@@ -59,19 +60,22 @@ if __name__ == '__main__':
         # print('state : ', state)
         done = False
         score = 0
+        step = 0
 
         np.savetxt("./Total_scores.txt",scores, delimiter=",")
 
         while not done:
+            step += 1
             agent.time_step += 1
             agent.env.render()
             action = agent.choose_action(state)
             next_state, reward, done, _ = agent.env.step(action)
+            real_done = False if step == max_steps else done
             # next_state = next_state.reshape(len(next_state))
             # print('next_state : ', next_state)
             n_steps += 1
             score += reward
-            agent.transition += [reward, next_state, done]
+            agent.transition += [reward, next_state, real_done]
             agent.memory.store(*agent.transition)
             if (len(agent.memory) >= agent.batch_size and agent.time_step > agent.train_start):
                 agent.learn()
