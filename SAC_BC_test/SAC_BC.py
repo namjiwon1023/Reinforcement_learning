@@ -135,7 +135,7 @@ class SACBCAgent:
             next_action, next_log_prob = self.actor(next_state, test_mode=False, with_logprob=True)
             q1_target, q2_target = self.critic_target(next_state, next_action)
             q_target = T.min(q1_target, q2_target)
-            value_target = reward + self.GAMMA * (q_target - self.alpha * next_log_prob) # action value function(Q_soft)
+            value_target = reward + self.GAMMA * (q_target - self.alpha * next_log_prob) * mask    # action value function(Q_soft)
         q1_eval, q2_eval = self.critic_eval(state, action)
         critic_loss = F.mse_loss(q1_eval, value_target) + F.mse_loss(q2_eval, value_target)
 

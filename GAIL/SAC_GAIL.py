@@ -117,7 +117,7 @@ class SACAgent:
             next_action, next_log_prob = self.actor(next_state, test_mode=False, with_logprob=True)
             q1_target, q2_target = self.critic_target(next_state, next_action)
             q_target = T.min(q1_target, q2_target)
-            value_target = reward + self.GAMMA * (q_target - self.alpha * next_log_prob)
+            value_target = reward + self.GAMMA * (q_target - self.alpha * next_log_prob) * mask
         q1_eval, q2_eval = self.critic_eval(state, action)
         critic_loss = F.mse_loss(q1_eval, value_target) + F.mse_loss(q2_eval, value_target)
 
@@ -150,7 +150,8 @@ class SACAgent:
         if self.total_episode % self.update_time == 0 :
             self.target_soft_update()
 
-        expert_state_action = self.store_memory[np.random.randint(0, self.store_memory.shape[0], 2), :]
+        # expert_state_action = self.store_memory[np.random.randint(0, self.store_memory.shape[0], 2), :]
+        expert_state_action = self.store_memory
         expert_state_action = T.FloatTensor(expert_state_action).to(self.Discriminator.device)
 
         fake = self.Discriminator(state, action)
