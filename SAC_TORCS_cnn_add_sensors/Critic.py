@@ -20,20 +20,10 @@ class CriticNetwork(nn.Module):
                                     nn.Conv2d(64, 64, kernel_size = 3, stride = 1),
                                     nn.ReLU())
         self.hidden_layer = nn.Sequential(nn.Linear(64*4*4 + n_actions + n_sensors, hidden_size_1),
+                                            nn.ReLU(),
+                                            nn.Linear(hidden_size_1, hidden_size_1),
                                             nn.ReLU())
-        # self.action_layer = nn.Sequential(nn.Linear(n_actions, hidden_size_1),
-        #                                   nn.ReLU())
-        # self.hidden_layer_1 = nn.Sequential(nn.Linear(64*4*4 + n_sensors + n_actions, hidden_size_1),
-        #                                     nn.ReLU())
 
-        # self.hidden_layer_2 = nn.Sequential(nn.Linear(n_sensors, hidden_size_1),
-        #                                     nn.ReLU())
-
-        # self.hidden_layer_3 = nn.Sequential(nn.Linear(n_actions, hidden_size_1),
-        #                                     nn.ReLU())
-
-        # self.hidden_layer_4 = nn.Sequential(nn.Linear(hidden_size_1, hidden_size_1),
-        #                                     nn.ReLU())
 
         self.criticQ_1 = nn.Sequential(nn.Linear(hidden_size_1, hidden_size_2),
                                         nn.ReLU(),
@@ -57,18 +47,6 @@ class CriticNetwork(nn.Module):
         cat = T.cat((feature, action), dim=-1)
         cat = T.cat((cat, sensors), dim=-1)
         cat = self.hidden_layer(cat)
-        # action = self.action_layer(action)
-        # cat = T.cat((feature, action), dim = -1)
-        # cat = T.cat((cat, sensors), dim = -1)
-        # cat = self.hidden_layer_1(cat)
-        # state_feature = self.hidden_layer_1(feature)
-        # sensors = self.hidden_layer_2(sensors)
-        # cat = feature + action
-
-        # action_feature = self.hidden_layer_3(action)
-
-        # cat = state_feature + action_feature + sensors
-        # cat = self.hidden_layer_4(cat)
 
         Q1 = self.criticQ_1(cat)
         Q2 = self.criticQ_2(cat)
