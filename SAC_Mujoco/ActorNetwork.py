@@ -5,20 +5,15 @@ import os
 import random
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.distributions import Normal, TransformedDistribution
-
-from utils2 import ReplayPool, TanhTransform
+from torch.distributions import Normal
 import numpy as np
 
 class ActorNetwork(nn.Module):
-    def __init__(self, n_states, n_actions, max_action, alpha, n_hidden=256, min_log_std = -20, max_log_std = 2,test_mode=False, with_logprob=True,
-                    dirPath='/home/nam/Reinforcement_learning/SAC_Mujoco'):
+    def __init__(self, n_states, n_actions, alpha, n_hidden=256, min_log_std = -20, max_log_std = 2,
+                dirPath='/home/nam/Reinforcement_learning/SAC_Mujoco'):
         super(ActorNetwork, self).__init__()
-        self.test_mode = test_mode
-        self.with_logprob = with_logprob
         self.min_log_std = min_log_std
         self.max_log_std = max_log_std
-        self.max_action = max_action
         self.checkpoint = os.path.join(dirPath, 'sac_actor')
 
         self.feature = nn.Sequential(nn.Linear(n_states, n_hidden),
@@ -36,7 +31,7 @@ class ActorNetwork(nn.Module):
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
-    def forward(self, state):
+    def forward(self, state, test_mode=False, with_logprob=True):
 
         feature = self.feature(state)
 
@@ -46,25 +41,21 @@ class ActorNetwork(nn.Module):
         std = T.exp(log_std)
 
         dist = Normal(mu, std)
-        # transforms = [TanhTransform(cache_size=1)]
-        # dist = TransformedDistribution(dist, transforms)
-        # dist = dist.tanh()
         z = dist.rsample()
 
-        if self.test_mode is True:
+        if test_mode is True:
             action = mu.tanh()
         else:
             action = z.tanh()
 
-        if self.with_logprob is True:
-            log_prob = dist.log_prob(z)# - T.log(1 - action.pow(2) + 1e-7)
+        if with_logprob is True:
+            # log_prob = dist.log_prob(action).sum(axis=-1)
+            # log_prob -= (2*(np.log(2) - action - F.softplus(-2*action))).sum(axis=1)
+            log_prob = dist.log_prob(z) - T.log(1 - action.pow(2) + 1e-7)
             log_prob = log_prob.sum(-1, keepdim=True)
-            # log_prob = dist.log_prob(z).sum(-1, keepdim=True)
-
         else:
             log_prob = None
 
-        action = self.max_action * action
         return action, log_prob
 
     def save_models(self):
