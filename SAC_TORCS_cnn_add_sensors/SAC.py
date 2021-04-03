@@ -52,10 +52,17 @@ class SACAgent:
     def choose_action(self, state, sensor):
         if self.test_mode is True:
             action = self.actor(T.unsqueeze(T.FloatTensor(state),0).to(self.actor.device), T.unsqueeze(T.FloatTensor(sensor),0).to(self.actor.device), test_mode=True, with_logprob=False)
+            action = action.cpu().detach().numpy()
         else:
-            action, _ = self.actor(T.unsqueeze(T.FloatTensor(state),0).to(self.actor.device), T.unsqueeze(T.FloatTensor(sensor),0).to(self.actor.device))
+            if self.total_episode < self.train_start:
+                action = np.zeros([1, self.n_actions])
+                action[0][0] = np.random.uniform(low=-1, high=1)
+                action[0][1] = np.random.uniform(low=0, high=1)
+                action[0][2] = np.random.uniform(low=0, high=1)
+            else:
+                action, _ = self.actor(T.unsqueeze(T.FloatTensor(state),0).to(self.actor.device), T.unsqueeze(T.FloatTensor(sensor),0).to(self.actor.device))
+                action = action.cpu().detach().numpy()
 
-        action = action.cpu().detach().numpy()
         self.transition = [state, sensor, action[0]]
         return action
 
@@ -144,8 +151,8 @@ if __name__ == "__main__":
 
 
     params = {
-                'GAMMA' : 0.99,
-                'learning_rate' : 3e-4,
+                'GAMMA' : 0.98,
+                'learning_rate' : 1e-4,
                 'tau' : 0.005,
                 'update_time' : 1,
                 'memory_size' : int(1e6),
@@ -153,6 +160,7 @@ if __name__ == "__main__":
                 'total_episode' : 0,
                 'vision' : True,
                 'test_mode' : False,
+                'train_start' : 1000,
 }
     agent = SACAgent(**params)
     sac_actor_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn_add_sensors/sac_actor'
@@ -168,7 +176,7 @@ if __name__ == "__main__":
 
 
     plt.ion()
-    plt.figure(figsize=(15, 5))
+    plt.figure(figsize=(10, 5))
 
     EPISODE_COUNT = int(1e6)
     MAX_STEPS = 100000
@@ -205,9 +213,8 @@ if __name__ == "__main__":
 
             agent.transition += [r, state_, sensor_state_, done]
             agent.memory.store(*agent.transition)
-
-            agent.learn()
-
+            if (len(agent.memory) >= agent.batch_size and agent.total_episode > agent.train_start):
+                agent.learn()
             step += 1
             score += r
             state = state_

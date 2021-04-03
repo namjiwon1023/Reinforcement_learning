@@ -19,11 +19,12 @@ class CriticNetwork(nn.Module):
                                     nn.ReLU(),
                                     nn.Conv2d(64, 64, kernel_size = 3, stride = 1),
                                     nn.ReLU())
-        self.hidden_layer = nn.Sequential(nn.Linear(64*4*4 + n_actions + n_sensors, hidden_size_1),
-                                            nn.ReLU(),
-                                            nn.Linear(hidden_size_1, hidden_size_1),
+        self.hidden_layer_1 = nn.Sequential(nn.Linear(64*4*4, hidden_size_1),
                                             nn.ReLU())
-
+        self.hidden_layer_2 = nn.Sequential(nn.Linear(n_actions, hidden_size_1),
+                                            nn.ReLU())
+        self.hidden_layer_3 = nn.Sequential(nn.Linear(n_sensors, hidden_size_1),
+                                            nn.ReLU())
 
         self.criticQ_1 = nn.Sequential(nn.Linear(hidden_size_1, hidden_size_2),
                                         nn.ReLU(),
@@ -44,9 +45,10 @@ class CriticNetwork(nn.Module):
     def forward(self, state, action, sensors):
         feature = self.feature(state)
         feature = feature.view(-1, 64*4*4)
-        cat = T.cat((feature, action), dim=-1)
-        cat = T.cat((cat, sensors), dim=-1)
-        cat = self.hidden_layer(cat)
+        feature = self.hidden_layer_1(feature)
+        action = self.hidden_layer_2(action)
+        sensors = self.hidden_layer_3(sensors)
+        cat = feature + action + sensors
 
         Q1 = self.criticQ_1(cat)
         Q2 = self.criticQ_2(cat)

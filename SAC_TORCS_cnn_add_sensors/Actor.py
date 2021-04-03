@@ -24,11 +24,12 @@ class ActorNetwork(nn.Module):
                                     nn.Conv2d(64, 64, kernel_size = 3, stride = 1),
                                     nn.ReLU())
 
-        self.hidden_layer = nn.Sequential(nn.Linear(64*4*4 + n_sensors, hidden_size),
-                                            nn.ReLU(),
-                                            nn.Linear(hidden_size, hidden_size),
+        self.hidden_layer = nn.Sequential(nn.Linear(64*4*4, hidden_size),
                                             nn.ReLU())
-
+        self.sensor_hidden = nn.Sequential(nn.Linear(n_sensors, hidden_size),
+                                            nn.ReLU())
+        self.cat = nn.Sequential(nn.Linear(hidden_size, hidden_size),
+                                nn.ReLU())
         self.mean = nn.Sequential(nn.Linear(hidden_size, n_actions))
         self.log_std = nn.Sequential(nn.Linear(hidden_size, n_actions))
 
@@ -40,8 +41,10 @@ class ActorNetwork(nn.Module):
     def forward(self, state, sensors, test_mode=False, with_logprob=True):
         feature = self.feature(state)
         feature = feature.view(-1, 64*4*4)
-        cat = T.cat((feature, sensors), dim=-1)
-        cat = self.hidden_layer(cat)
+        feature = self.hidden_layer(feature)
+        sensors = self.sensor_hidden(sensors)
+        cat = feature + sensors
+        cat = self.cat(cat)
 
         mu = self.mean(cat)
         log_std = self.log_std(cat)

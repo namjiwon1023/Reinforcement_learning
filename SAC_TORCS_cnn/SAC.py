@@ -12,20 +12,9 @@ from Actor import ActorNetwork
 from Critic import CriticNetwork
 from ReplayBuffer import ReplayBuffer
 
-if T.backends.cudnn.enabled:
-    T.backends.cudnn.benchmark = False
-    T.backends.cudnn.deterministic = True
-seed = 123
-T.cuda.manual_seed(seed)
-T.manual_seed(seed)
-np.random.seed(seed)
-random.seed(seed)
-
 device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
-print('Using GPU : ', T.cuda.is_available() , ' |  Seed : ', seed)
 
-
-def _layer_norm(m, std=1.0, bias_const=1e-6):   # bias_const = 1e-6
+def _layer_norm(m, std=1.0, bias_const=1e-6):
     if isinstance(m, nn.Linear):
         T.nn.init.orthogonal_(m.weight, std)
         T.nn.init.constant_(m.bias, bias_const)
@@ -60,8 +49,10 @@ class SACAgent:
         self.transition = list()
 
     def choose_action(self, state):
-
-        action, _ = self.actor(T.unsqueeze(T.FloatTensor(state),0).to(self.actor.device))
+        if self.test_mode is True:
+            action = self.actor(T.unsqueeze(T.FloatTensor(state),0).to(self.actor.device), test_mode=True, with_logprob=False)
+        else :
+            action, _ = self.actor(T.unsqueeze(T.FloatTensor(state),0).to(self.actor.device))
         action = action.cpu().detach().numpy()
         self.transition = [state, action[0]]
         return action
@@ -137,8 +128,17 @@ class SACAgent:
 
 if __name__ == "__main__":
 
+    if T.backends.cudnn.enabled:
+        T.backends.cudnn.benchmark = False
+        T.backends.cudnn.deterministic = True
+    seed = 123
+    T.cuda.manual_seed(seed)
+    T.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    print('Using GPU : ', T.cuda.is_available() , ' |  Seed : ', seed)
     params = {
-                'GAMMA' : 0.98,
+                'GAMMA' : 0.96,
                 'learning_rate' : 3e-4,
                 'tau' : 0.005,
                 'update_time' : 1,
@@ -146,6 +146,7 @@ if __name__ == "__main__":
                 'batch_size' : 256,
                 'total_episode' : 0,
                 'vision' : True,
+                'test_mode' : False,
 }
     agent = SACAgent(**params)
     sac_actor_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn/sac_actor'
@@ -154,6 +155,7 @@ if __name__ == "__main__":
     sac_critic_optimizer_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn/sac_critic_optimizer'
     alpha_optimizer_parameter = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn/alpha_optimizer'
     reward_file = '/home/nam/Reinforcement_learning/SAC_TORCS_cnn/reward.txt'
+
     if os.path.exists(sac_actor_parameter) and os.path.exists(sac_actor_optimizer_parameter) and os.path.exists(sac_critic_parameter) and os.path.exists(sac_critic_optimizer_parameter) and os.path.exists(alpha_optimizer_parameter):
         agent.load_models()
     else:
@@ -161,7 +163,7 @@ if __name__ == "__main__":
 
 
     plt.ion()
-    plt.figure(figsize=(15, 5))
+    plt.figure(figsize=(10, 5))
 
     EPISODE_COUNT = int(1e6)
     MAX_STEPS = 100000
@@ -213,22 +215,22 @@ if __name__ == "__main__":
         if avg_score > best_score:
             best_score = avg_score
             agent.save_models()
-
-        z = [c+1 for c in range(len(scores))]
-        running_avg = np.zeros(len(scores))
-        for e in range(len(running_avg)):
-            running_avg[e] = np.mean(scores[max(0, e-10):(e+1)])
-        plt.cla()
-        plt.title("Total_scores")
-        plt.grid(True)
-        plt.xlabel("Episode_Reward")
-        plt.ylabel("Total reward")
-        plt.plot(scores, "r-", linewidth=1.5, label="SAC_Episode_Reward")
-        plt.plot(z, running_avg, "b-", linewidth=1.5, label="SAC_Avg_Reward")
-        plt.legend(loc="best", shadow=True)
-        plt.pause(0.1)
-        plt.savefig('./SAC_TORCS.jpg')
-        plt.show()
+        if e % 20 == 0:
+            z = [c+1 for c in range(len(scores))]
+            running_avg = np.zeros(len(scores))
+            for e in range(len(running_avg)):
+                running_avg[e] = np.mean(scores[max(0, e-10):(e+1)])
+            plt.cla()
+            plt.title("Total_scores")
+            plt.grid(True)
+            plt.xlabel("Episode_Reward")
+            plt.ylabel("Total reward")
+            plt.plot(scores, "r-", linewidth=1.5, label="SAC_Episode_Reward")
+            plt.plot(z, running_avg, "b-", linewidth=1.5, label="SAC_Avg_Reward")
+            plt.legend(loc="best", shadow=True)
+            plt.pause(0.1)
+            plt.savefig('./SAC_TORCS.jpg')
+            plt.show()
 
     env.end()
     print('Finish.')
