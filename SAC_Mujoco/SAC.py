@@ -24,7 +24,7 @@ class SACAgent:
         dirPath='/home/nam/Reinforcement_learning/SAC_Mujoco'
         self.checkpoint = os.path.join(dirPath, 'alpha_optimizer')
 
-        self.env = gym.make('Walker2d-v2')
+        self.env = gym.make('Humanoid-v2')
         self.env = RescaleAction(self.env, -1, 1)
 
         self.n_states = self.env.observation_space.shape[0]
