@@ -51,14 +51,14 @@ class SACAgent:
 
 
     def choose_action(self, state):
-        if (self.test_mode is True):
-            action = self.actor(T.FloatTensor(state).to(self.actor.device), test_mode=True, with_logprob=False)
-        else:
-            if (self.total_episode < self.train_start):
-                action = self.env.action_space.sample()
-            else:
-                action, _ = self.actor(T.FloatTensor(state).to(self.actor.device))
-                action = action.detach().cpu().numpy()
+        if (self.total_episode < self.train_start) and self.test_mode is False:
+            action = self.env.action_space.sample()
+        elif (self.total_episode > self.train_start) and self.test_mode is False:
+            action, _ = self.actor(T.FloatTensor(state).to(self.actor.device))
+            action = action.detach().cpu().numpy()
+        elif (self.total_episode > self.train_start) and self.test_mode is True:
+            action, _ = self.actor(T.FloatTensor(state).to(self.actor.device), test_mode=True, with_logprob=False)
+            action = action.detach().cpu().numpy()
         self.transition = [state, action]
         return action
 
