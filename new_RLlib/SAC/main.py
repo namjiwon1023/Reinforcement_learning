@@ -22,8 +22,6 @@ if __name__ == '__main__':
                 'tau' : 5e-3,
                 'soft_update_time' : 1,
                 'memory_size' : int(1e6),
-                'policy_update_step' : int(2**10),
-                'repeat_times' : int(2 ** 0),
                 'batch_size' : 256,
                 'total_step' : 0,
                 'train_start_step' : 10000,
@@ -32,6 +30,8 @@ if __name__ == '__main__':
                 'use_cuda' : True,
                 'learn_iter' : 0,
                 'render' : False,
+                'n_step_update' : 1,
+                'reward_scale' : float(2 ** -2),
 }
     if not os.path.exists("./checkpoint"):
         os.makedirs("./checkpoint")
@@ -54,10 +54,9 @@ if __name__ == '__main__':
     i_episode = int(1e6)
     best_score = agent.env.reward_range[0]
     scores = []
+    avg_scores = []
 
     avg_score = 0
-    n_steps = 0
-
 
     plt.ion()
     plt.figure(figsize=(10, 5))
@@ -70,7 +69,8 @@ if __name__ == '__main__':
         done = False
         score = 0
 
-        np.savetxt("./Total_scores.txt",scores, delimiter=",")
+        np.savetxt("./Episode_return.txt", scores, delimiter=",")
+        np.savetxt("./Avg_reward.txt", avg_scores, delimiter=",")
 
         while (not done):
             if agent.render is True:
@@ -82,21 +82,24 @@ if __name__ == '__main__':
             real_done = False if episode_steps >= agent.env.spec.max_episode_steps else done
             mask = 0.0 if real_done else agent.GAMMA
             score += reward
-            agent.transition += [reward, next_state, mask]
+            scaled_reward = reward * agent.reward_scale
+            agent.transition += [scaled_reward, next_state, mask]
             agent.memory.store(*agent.transition)
             state = next_state
-            n_steps += 1
 
-        if (len(agent.memory) >= agent.batch_size and agent.total_step > agent.train_start_step):
-            agent.learn()
+            if len(agent.memory) >= (2 * agent.batch_size) and agent.total_step > agent.train_start_step:
+                for _ in range(agent.n_step_update):
+                    agent.learn()
 
-        scores.append(score)
+        if agent.total_step > agent.train_start_step:
+            scores.append(score)
         avg_score = np.mean(scores[-10:])
+        avg_scores.append(avg_score)
 
         if avg_score > best_score:
             best_score = avg_score
             agent.save_models()
 
-        print('Episode',i,' | Episode_score %.1f' %score,' | Avg score %.1f' % avg_score, ' | Time_steps',n_steps, ' | learning_step',agent.learn_iter)
+        print('Episode : {} | Episode score : {} | Avg score : {} | Time_steps : {} | learning_step : {}'.format(i, score, avg_score, agent.total_step, agent.learn_iter))
         if i % 10 == 0:
             _plot(scores)

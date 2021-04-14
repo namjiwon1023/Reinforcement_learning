@@ -9,8 +9,7 @@ from torch.distributions import Normal
 import numpy as np
 
 class ActorNetwork(nn.Module):
-    def __init__(self, n_states, n_actions, alpha, n_hidden=256, min_log_std = -20, max_log_std = 2,
-                dirPath='/home/nam/Reinforcement_learning/new_RLlib/SAC/checkpoint'):
+    def __init__(self, n_states, n_actions, n_hidden, alpha, dirPath, min_log_std = -20, max_log_std = 2):
         super(ActorNetwork, self).__init__()
         self.min_log_std = min_log_std
         self.max_log_std = max_log_std

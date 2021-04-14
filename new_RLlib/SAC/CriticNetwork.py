@@ -9,9 +9,9 @@ from torch.distributions import Normal
 import numpy as np
 
 class CriticNetwork(nn.Module):
-    def __init__(self, n_states, n_actions, alpha, n_hidden=256, dirPath='/home/nam/Reinforcement_learning/new_RLlib/SAC/checkpoint'):
+    def __init__(self, n_states, n_actions, n_hidden, alpha, dirPath):
         super(CriticNetwork, self).__init__()
-        self.checkpoint = os.path.join(dirPath, 'SAC_Mujoco')
+        self.checkpoint = os.path.join(dirPath, 'sac_critic')
 
         self.criticQ_1 = nn.Sequential(nn.Linear(n_states + n_actions, n_hidden),
                                         nn.ReLU(),
