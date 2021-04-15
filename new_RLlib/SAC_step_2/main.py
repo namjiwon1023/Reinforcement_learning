@@ -6,6 +6,7 @@ import os
 import gym
 import random
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 from ReplayBuffer import ReplayBuffer
 from ActorNetwork import ActorNetwork
@@ -27,9 +28,10 @@ if __name__ == '__main__':
                 'train_start_step' : 10000,
                 'use_cuda' : True,
                 'render' : False,
-                'update_n_step' : 1,
-                'eval_step' : 1000,
+                'eval_step' : 5000,
                 'learn_iter' : 0,
+                'target_step' : int(2**10),
+                'repeat_times' : int(2**0),
 }
     if not os.path.exists("./checkpoint"):
         os.makedirs("./checkpoint")
@@ -37,7 +39,7 @@ if __name__ == '__main__':
     random_seed(123)
     agent = SACAgent(**params)
 
-    dirPath = '/home/nam/Reinforcement_learning/new_RLlib/SAC_step/checkpoint/'
+    dirPath = '/home/nam/Reinforcement_learning/new_RLlib/SAC_step_2/checkpoint/'
     sac_actor_parameter = dirPath + 'sac_actor'
     sac_actor_optimizer_parameter = dirPath + 'sac_actor_optimizer'
     sac_critic_parameter = dirPath + 'sac_critic'
@@ -50,6 +52,7 @@ if __name__ == '__main__':
         print('------ No parameters available! ------')
 
     i_episode = int(1e6)
+    max_step = 10000
     best_score = agent.env.reward_range[0]
     scores = []
     eval_rewards = []
@@ -63,13 +66,12 @@ if __name__ == '__main__':
     for i in range(1, i_episode + 1):
         state = agent.env.reset()
         episode_steps = 0
-        done = False
         score = 0
 
         np.savetxt("./Episode_return.txt", scores, delimiter=",")
         np.savetxt("./Step_return.txt", eval_rewards, delimiter=",")
 
-        while not done:
+        for _ in tqdm(range(max_step)):
             if agent.render is True:
                 agent.env.render()
             episode_steps += 1
@@ -83,23 +85,25 @@ if __name__ == '__main__':
             agent.memory.store(*agent.transition)
             state = next_state
             score += reward
+            if done :
+                state = agent.env.reset()
+                if agent.total_step > agent.train_start_step:
+                    scores.append(score)
+                    avg_score = np.mean(scores[-10:])
+                if avg_score > best_score:
+                    best_score = avg_score
+                    agent.save_models()
+                score = 0
 
-            if len(agent.memory) >= agent.batch_size and agent.total_step > agent.train_start_step and agent.total_step % agent.update_n_step == 0:
-                for _ in range(agent.update_n_step):
-                    agent.learn()
-                    agent.learn_iter += 1
 
-            if len(agent.memory) >= agent.batch_size and agent.total_step > agent.train_start_step and agent.total_step % agent.eval_step == 0:
-                eval_reward = agent.evaluate_agent(n_starts=1)
-                eval_rewards.append(eval_reward)
 
-        if agent.total_step > agent.train_start_step:
-            scores.append(score)
-            avg_score = np.mean(scores[-10:])
+        if len(agent.memory) >= agent.batch_size and agent.total_step > agent.train_start_step:
+            agent.learn()
+            agent.learn_iter += 1
 
-        if avg_score > best_score:
-            best_score = avg_score
-            agent.save_models()
+        if len(agent.memory) >= agent.batch_size and agent.total_step > agent.train_start_step and agent.total_step % agent.eval_step == 0:
+            eval_reward = agent.evaluate_agent(n_starts=20)
+            eval_rewards.append(eval_reward)
 
         print('Episode : {} | Score : {} | Avg score : {} | Time_steps : {} | learning_step : {} '.format(i, score, avg_score, n_steps, agent.learn_iter))
         if i % 50 == 0:
