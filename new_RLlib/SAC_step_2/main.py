@@ -67,6 +67,7 @@ if __name__ == '__main__':
         state = agent.env.reset()
         episode_steps = 0
         score = 0
+        done = False
 
         np.savetxt("./Episode_return.txt", scores, delimiter=",")
         np.savetxt("./Step_return.txt", eval_rewards, delimiter=",")
@@ -86,25 +87,22 @@ if __name__ == '__main__':
             state = next_state
             score += reward
             if done :
-                state = agent.env.reset()
-                if agent.total_step > agent.train_start_step:
-                    scores.append(score)
-                    avg_score = np.mean(scores[-10:])
-                if avg_score > best_score:
-                    best_score = avg_score
-                    agent.save_models()
-                score = 0
-
-
+                break
 
         if len(agent.memory) >= agent.batch_size and agent.total_step > agent.train_start_step:
             agent.learn()
-            agent.learn_iter += 1
 
         if len(agent.memory) >= agent.batch_size and agent.total_step > agent.train_start_step and agent.total_step % agent.eval_step == 0:
             eval_reward = agent.evaluate_agent(n_starts=20)
             eval_rewards.append(eval_reward)
 
-        print('Episode : {} | Score : {} | Avg score : {} | Time_steps : {} | learning_step : {} '.format(i, score, avg_score, n_steps, agent.learn_iter))
+        if agent.total_step > agent.train_start_step:
+            scores.append(score)
+            avg_score = np.mean(scores[-10:])
+        if avg_score > best_score:
+            best_score = avg_score
+            agent.save_models()
+
+        print('Episode : {} | Score : {} | Avg score : {} | Time_steps : {} '.format(i, score, avg_score, n_steps))
         if i % 50 == 0:
             _plot(scores, eval_rewards)
