@@ -50,7 +50,7 @@ if __name__ == '__main__':
         print('|----- No parameters available! -----|')
         print('|------------------------------------|')
 
-    i_episode = int(1e4)
+    i_episode = int(1e6)
     best_score = agent.env.reward_range[0]
     scores = []
     eval_rewards = []
@@ -90,7 +90,7 @@ if __name__ == '__main__':
             agent.learn()
             learning_steps += 1
 
-        if agent.total_step >= agent.train_start_step and agent.total_step % agent.eval_steps == 0:
+        if agent.total_step >= agent.train_start_step and learning_steps % agent.eval_steps == 0:
             eval_reward = agent.evaluate_agent(n_starts=10)
             eval_rewards.append(eval_reward)
             print('| Episode : {} | Score : {} | Predict Score : {} | Avg score : {} |'.format(i, score, eval_reward, avg_score))
