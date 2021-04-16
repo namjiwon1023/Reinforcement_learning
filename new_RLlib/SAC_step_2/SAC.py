@@ -8,6 +8,7 @@ import copy
 import gym
 from gym.wrappers import RescaleAction
 import random
+from tqdm import tqdm
 
 from ReplayBuffer import ReplayBuffer
 from ActorNetwork import ActorNetwork
@@ -71,15 +72,12 @@ class SACAgent:
                 t_p.data.copy_(tau * l_p.data + (1 - tau) * t_p.data)
 
     def learn(self):
-        for _ in range(self.gradient_steps):
+        for e in range(self.gradient_steps):
+            self.learning_steps += 1
             with T.no_grad():
                 samples = self.memory.sample_batch(self.batch_size)
-
-                state = samples["state"]
-                next_state = samples["next_state"]
-                action = samples["action"].reshape(-1, self.n_actions)
-                reward = samples["reward"].reshape(-1, 1)
-                mask = samples["mask"].reshape(-1, 1)
+                state, next_state, action, reward, mask = samples["state"], samples["next_state"], \
+                        samples["action"].reshape(-1, self.n_actions), samples["reward"], samples["mask"]
 
                 # critic update
                 next_action, next_log_prob = self.actor(next_state)
@@ -114,7 +112,8 @@ class SACAgent:
                 p.requires_grad = True
 
             self.alpha = self.log_alpha.exp()
-            if self.total_step % self.target_update_interval == 0:
+
+            if e % self.target_update_interval == 0:
                 self.target_soft_update()
 
     def save_models(self):

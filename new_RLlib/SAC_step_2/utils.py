@@ -40,7 +40,7 @@ def _plot(scores, eval_rewards):
     plt.cla()
     plt.title("Return")
     plt.grid(True)
-    plt.xlabel("Step (Unit：1000)")
+    plt.xlabel("Step (Unit 1000)")
     plt.ylabel("Total Reward")
     plt.plot(eval_rewards, "b-", linewidth=1.5, label="Step Reward")
     plt.legend(loc="best", shadow=True)

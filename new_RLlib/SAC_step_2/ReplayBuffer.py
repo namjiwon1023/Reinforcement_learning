@@ -44,9 +44,9 @@ class ReplayBuffer:
 
         return dict(state = T.as_tensor(self.state[index], dtype=T.float32, device=self.device),
                     action = T.as_tensor(self.action[index], dtype=T.float32, device=self.device),
-                    reward = T.as_tensor(self.reward[index], dtype=T.float32, device=self.device),
+                    reward = T.as_tensor(self.reward[index], dtype=T.float32, device=self.device).reshape(-1, 1),
                     next_state = T.as_tensor(self.next_state[index], dtype=T.float32, device=self.device),
-                    mask = T.as_tensor(self.mask[index], dtype=T.float32, device=self.device),
+                    mask = T.as_tensor(self.mask[index], dtype=T.float32, device=self.device).reshape(-1, 1),
                     )
 
     def __len__(self):
