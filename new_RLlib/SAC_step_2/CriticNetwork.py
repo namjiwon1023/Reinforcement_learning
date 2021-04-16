@@ -17,13 +17,9 @@ class CriticNetwork(nn.Module):
                                         nn.ReLU(),
                                         nn.Linear(n_hidden, n_hidden),
                                         nn.ReLU(),
-                                        nn.Linear(n_hidden, n_hidden),
-                                        nn.ReLU(),
                                         nn.Linear(n_hidden, 1))
 
         self.criticQ_2 = nn.Sequential(nn.Linear(n_states + n_actions, n_hidden),
-                                        nn.ReLU(),
-                                        nn.Linear(n_hidden, n_hidden),
                                         nn.ReLU(),
                                         nn.Linear(n_hidden, n_hidden),
                                         nn.ReLU(),

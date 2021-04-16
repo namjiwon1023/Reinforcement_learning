@@ -20,7 +20,7 @@ class SACAgent:
             setattr(self, key, value)
 
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
-        self.dirPath='/home/nam/Reinforcement_learning/new_RLlib/SAC_step_2/checkpoint'
+        self.dirPath= os.getcwd() + '/checkpoint'
         self.alpha_checkpoint = os.path.join(self.dirPath, 'alpha_optimizer')
 
         self.env = gym.make('Walker2d-v2')
@@ -28,9 +28,9 @@ class SACAgent:
 
         self.n_states = self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.shape[0]
-        self.n_hiddens = 256
+        self.n_hiddens = int(2**8)
 
-        self.memory = ReplayBuffer(self.memory_size, self.n_states, self.n_actions, self.use_cuda)
+        self.memory = ReplayBuffer(self.memory_size, self.n_states, self.n_actions, use_cuda=True)
 
         self.target_entropy = -self.n_actions
         self.log_alpha = T.zeros(1, requires_grad=True, device=self.device)
@@ -71,19 +71,17 @@ class SACAgent:
                 t_p.data.copy_(tau * l_p.data + (1 - tau) * t_p.data)
 
     def learn(self):
-        k = 1.0 + len(self.memory) / self.memory_size
-        batch_size_ = int(self.batch_size * k)
-        train_steps = int(self.target_step * k * self.repeat_times)
-        for _ in range(train_steps):
-            samples = self.memory.sample_batch(batch_size_)
-            state = samples["state"]
-            next_state = samples["next_state"]
-            action = samples["action"].reshape(-1, self.n_actions)
-            reward = samples["reward"].reshape(-1, 1)
-            mask = samples["mask"].reshape(-1, 1)
-
-            # critic update
+        for _ in range(self.gradient_steps):
             with T.no_grad():
+                samples = self.memory.sample_batch(self.batch_size)
+
+                state = samples["state"]
+                next_state = samples["next_state"]
+                action = samples["action"].reshape(-1, self.n_actions)
+                reward = samples["reward"].reshape(-1, 1)
+                mask = samples["mask"].reshape(-1, 1)
+
+                # critic update
                 next_action, next_log_prob = self.actor(next_state)
                 q1_target, q2_target = self.critic_target(next_state, next_action)
                 q_target = T.min(q1_target, q2_target)
@@ -116,8 +114,8 @@ class SACAgent:
                 p.requires_grad = True
 
             self.alpha = self.log_alpha.exp()
-
-            self.target_soft_update()
+            if self.total_step % self.target_update_interval == 0:
+                self.target_soft_update()
 
     def save_models(self):
         print('------ save models ------')
@@ -135,7 +133,7 @@ class SACAgent:
         self.critic_eval.load_models()
         self.critic_target = copy.deepcopy(self.critic_eval)
 
-    def evaluate_agent(self, n_starts=1):
+    def evaluate_agent(self, n_starts=10):
         reward_sum = 0
         for _ in range(n_starts):
             done = False
