@@ -20,7 +20,7 @@ class SACAgent:
             setattr(self, key, value)
 
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
-        self.dirPath='/home/nam/Reinforcement_learning/new_RLlib/SAC/checkpoint'
+        self.dirPath='/home/nam/Reinforcement_learning/new_RLlib/SAC_step/checkpoint'
         self.alpha_checkpoint = os.path.join(self.dirPath, 'alpha_optimizer')
 
         self.env = gym.make('Walker2d-v2')
@@ -55,7 +55,7 @@ class SACAgent:
             action, _ = self.actor(T.as_tensor(state, dtype=T.float32, device=self.actor.device), test_mode=True, with_logprob=False)
             action = action.detach().cpu().numpy()
         else:
-            if self.total_episode < self.train_start_episode:
+            if self.total_step < self.train_start_step:
                 action = self.env.action_space.sample()
             else:
                 action, _ = self.actor(T.as_tensor(state, dtype=T.float32, device=self.actor.device))
@@ -71,11 +71,6 @@ class SACAgent:
                 t_p.data.copy_(tau * l_p.data + (1 - tau) * t_p.data)
 
     def learn(self):
-        # k = 1.0 + len(self.memory) / self.memory_size
-        # batch_size_ = int(self.batch_size * k)
-
-        # self.learn_iter += 1
-        # samples = self.memory.sample_batch(batch_size_)
         samples = self.memory.sample_batch(self.batch_size)
         state = samples["state"]
         next_state = samples["next_state"]
@@ -118,7 +113,7 @@ class SACAgent:
 
         self.alpha = self.log_alpha.exp()
 
-        if self.learn_iter % self.soft_update_time == 0 :
+        if self.total_step % self.soft_update_time == 0 :
             self.target_soft_update()
 
     def save_models(self):
@@ -137,14 +132,14 @@ class SACAgent:
         self.critic_eval.load_models()
         self.critic_target = copy.deepcopy(self.critic_eval)
 
-    # def evaluate_agent(self, n_starts=1):
-    #     reward_sum = 0
-    #     for _ in range(n_starts):
-    #         done = False
-    #         state = self.env.reset()
-    #         while (not done):
-    #             action = self.choose_action(state, test_mode=True)
-    #             next_state, reward, done, _ = self.env.step(action)
-    #             reward_sum += reward
-    #             state = next_state
-    #     return reward_sum / n_starts
+    def evaluate_agent(self, n_starts=1):
+        reward_sum = 0
+        for _ in range(n_starts):
+            done = False
+            state = self.env.reset()
+            while (not done):
+                action = self.choose_action(state, test_mode=True)
+                next_state, reward, done, _ = self.env.step(action)
+                reward_sum += reward
+                state = next_state
+        return reward_sum / n_starts

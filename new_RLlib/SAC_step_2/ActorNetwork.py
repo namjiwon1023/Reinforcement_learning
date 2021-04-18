@@ -19,8 +19,7 @@ class ActorNetwork(nn.Module):
                                     nn.ReLU(),
                                     nn.Linear(n_hidden, n_hidden),
                                     nn.ReLU(),
-                                    nn.Linear(n_hidden, n_hidden),
-                                    nn.ReLU())
+                                    )
 
         self.log_std = nn.Linear(n_hidden, n_actions)
 

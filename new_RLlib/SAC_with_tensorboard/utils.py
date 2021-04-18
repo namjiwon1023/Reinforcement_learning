@@ -21,7 +21,8 @@ def random_seed(seed):
     random.seed(seed)
     print('Using GPU : ', T.cuda.is_available() , ' |  Seed : ', seed)
 
-def _plot(scores):
+def _plot(scores, eval_rewards):
+    plt.subplot(121)
     z = [c+1 for c in range(len(scores))]
     running_avg = np.zeros(len(scores))
     for e in range(len(running_avg)):
@@ -30,10 +31,20 @@ def _plot(scores):
     plt.title("Return")
     plt.grid(True)
     plt.xlabel("Episode")
-    plt.ylabel("Total reward")
-    plt.plot(scores, "r-", linewidth=1.5, label="episode_reward")
-    plt.plot(z, running_avg, "b-", linewidth=1.5, label="avg_reward")
+    plt.ylabel("Total Reward")
+    plt.plot(scores, "r-", linewidth=1.5, label="Episode Reward")
+    plt.plot(z, running_avg, "b-", linewidth=1.5, label="Avg Reward")
+    plt.legend(loc="best", shadow=True)
+
+    plt.subplot(122)
+    plt.cla()
+    plt.title("Return")
+    plt.grid(True)
+    plt.xlabel("Step (Unit 1000)")
+    plt.ylabel("Total Reward")
+    plt.plot(eval_rewards, "b-", linewidth=1.5, label="Step Reward")
     plt.legend(loc="best", shadow=True)
     plt.pause(0.1)
+
     plt.savefig('./sac.jpg')
     plt.show()
