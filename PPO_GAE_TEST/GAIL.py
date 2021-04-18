@@ -111,8 +111,8 @@ def expert_reward(state, action):
     state_action = torch.FloatTensor(np.concatenate([state, action], 1)).to(device)
     return -np.log(discriminator(state_action).cpu().data.numpy())
 
-num_inputs  = envs.observation_space.shape[0]
-num_outputs = envs.action_space.shape[0]
+num_inputs  = env.observation_space.shape[0]
+num_outputs = env.action_space.shape[0]
 
 
 #Hyper params:
@@ -137,7 +137,7 @@ max_frames = 100000
 frame_idx = 0
 
 i_update = 0
-state = envs.reset()
+state = env.reset()
 
 while frame_idx < max_frames:
     i_update += 1
@@ -155,7 +155,7 @@ while frame_idx < max_frames:
         dist, value = model(state)
 
         action = dist.sample()
-        next_state, reward, done, _ = envs.step(action.cpu().numpy())
+        next_state, reward, done, _ = env.step(action.cpu().numpy())
         reward = expert_reward(state, action.cpu().numpy())
 
         log_prob = dist.log_prob(action)

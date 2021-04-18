@@ -78,16 +78,15 @@ class SACAgent:
 
         self.transition = list()
 
-        self.total_step = 0
 
     def choose_action(self, state, test_mode):
         test_mode = self.test_mode
-        if (self.total_step < self.train_start) and not test_mode:
+        if (self.total_episode < self.train_start) and not test_mode:
             action = self.env.action_space.sample()
         if self.test_mode is True:
             action = self.actor(T.FloatTensor(state).to(self.actor.device), test_mode=True, with_logprob=False)[0].detach().cpu().numpy()
         else:
-            action = self.actor(T.FloatTensor(state).to(self.actor.device), test_mode=False, with_logprob=True)[0].detach().cpu().numpy()
+            action, _ = self.actor(T.FloatTensor(state).to(self.actor.device), test_mode=False, with_logprob=True)[0].detach().cpu().numpy()
         self.transition = [state, action]
         return action
 
@@ -111,7 +110,7 @@ class SACAgent:
             next_action, next_log_prob = self.actor(next_state, test_mode=False, with_logprob=True)
             q1_target, q2_target = self.critic_target(next_state, next_action)
             q_target = T.min(q1_target, q2_target)
-            value_target = reward + self.GAMMA * (q_target - self.alpha * next_log_prob)
+            value_target = reward + self.GAMMA * (q_target - self.alpha * next_log_prob) * mask
         q1_eval, q2_eval = self.critic_eval(state, action)
         critic_loss = F.mse_loss(q1_eval, value_target) + F.mse_loss(q2_eval, value_target)
 
@@ -141,5 +140,5 @@ class SACAgent:
 
         self.alpha = self.log_alpha.exp()
 
-        if self.total_step % self.update_time == 0 :
+        if self.total_episode % self.update_time == 0 :
             self.target_soft_update()

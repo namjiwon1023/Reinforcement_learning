@@ -49,20 +49,20 @@ class ActionNormalizer(gym.ActionWrapper):
 
 device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
 
-class SACAgent:
+class SACBCAgent:
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-        # self.env = gym.make('Pendulum-v0')
-        self.env = gym.make('BipedalWalker-v2')
+        self.env = gym.make('Pendulum-v0')
+        # self.env = gym.make('BipedalWalker-v2')
         # self.env = ActionNormalizer(self.env)
 
         self.n_states = self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.shape[0]
         self.max_action = float(self.env.action_space.high[0])
 
-        self.memory = ReplayBuffer(self.memory_size, self.n_states, self.n_actions, self.batch_size)
+        self.memory = ReplayBuffer(self.memory_size, self.n_states, self.batch_size)
 
         self.target_entropy = -self.n_actions
         self.log_alpha = T.zeros(1, requires_grad=True, device=device)
@@ -79,27 +79,30 @@ class SACAgent:
 
         self.transition = list()
 
-        self.total_step = 0
+        dirPath='/home/nam/Reinforcement_learning/SAC_BC_test/BC_test'
+        self.checkpoint = os.path.join(dirPath, 'sac_bc')
 
         # BC
+        self.store_memory_batch_size = 128
         lambda1 = 1e-3
         lambda2 = 1.0
         self.lambda1 = lambda1
         self.lambda2 = lambda2 / self.store_memory_batch_size
-        self.store_memory_batch_size = 128
-        self.store_memory = np.load('store_memory.npy')
+        self.store_memory = np.load('store_memory.npy',allow_pickle = True)
+        # print(self.store_memory.shape)
+        # self.store_memory = self.store_memory[-1000 :]
 
-        self.memory_backup = ReplayBuffer(len(self.store_memory), self.n_states, self.n_actions, self.store_memory_batch_size)
+        self.memory_backup = ReplayBuffer(len(self.store_memory), self.n_states, self.store_memory_batch_size)
         self.memory_backup.store_with_store_memory(self.store_memory)
 
     def choose_action(self, state, test_mode):
         test_mode = self.test_mode
-        if (self.total_step < self.train_start) and not test_mode:
+        if (self.total_episode < self.train_start) and not test_mode:
             action = self.env.action_space.sample()
         if self.test_mode is True:
             action = self.actor(T.FloatTensor(state).to(self.actor.device), test_mode=True, with_logprob=False)[0].detach().cpu().numpy()
         else:
-            action = self.actor(T.FloatTensor(state).to(self.actor.device), test_mode=False, with_logprob=True)[0].detach().cpu().numpy()
+            action, _ = self.actor(T.FloatTensor(state).to(self.actor.device), test_mode=False, with_logprob=True)[0].detach().cpu().numpy()
         self.transition = [state, action]
         return action
 
@@ -113,7 +116,7 @@ class SACAgent:
         samples = self.memory.sample_batch()
         state = T.FloatTensor(samples["state"]).to(self.actor.device)
         next_state = T.FloatTensor(samples["next_state"]).to(self.actor.device)
-        action = T.FloatTensor(samples["action"].reshape(-1, self.n_actions)).to(self.actor.device)
+        action = T.FloatTensor(samples["action"].reshape(-1, 1)).to(self.actor.device)
         reward = T.FloatTensor(samples["reward"].reshape(-1, 1)).to(self.actor.device)
         done = T.FloatTensor(samples["done"].reshape(-1, 1)).to(self.actor.device)
         mask = (1 - done).to(self.actor.device)
@@ -132,7 +135,7 @@ class SACAgent:
             next_action, next_log_prob = self.actor(next_state, test_mode=False, with_logprob=True)
             q1_target, q2_target = self.critic_target(next_state, next_action)
             q_target = T.min(q1_target, q2_target)
-            value_target = reward + self.GAMMA * (q_target - self.alpha * next_log_prob) # action value function(Q_soft)
+            value_target = reward + self.GAMMA * (q_target - self.alpha * next_log_prob) * mask    # action value function(Q_soft)
         q1_eval, q2_eval = self.critic_eval(state, action)
         critic_loss = F.mse_loss(q1_eval, value_target) + F.mse_loss(q2_eval, value_target)
 
@@ -150,7 +153,9 @@ class SACAgent:
         alpha_loss = -self.log_alpha * (new_log_prob.detach() + self.target_entropy).mean()
 
         pred_action, _ = self.actor(state_b, test_mode=False, with_logprob=True)
-        qf_mask = T.gt(self.critic_eval(state_b, action_b),self.critic_eval(state_b, pred_action),).to(self.critic_eval.device)
+        q_t = T.min(*self.critic_eval(state_b, action_b))
+        q_e = T.min(*self.critic_eval(state_b, pred_action))
+        qf_mask = T.gt(q_t, q_e).to(self.critic_eval.device)
         qf_mask = qf_mask.float()
         n_qf_mask = int(qf_mask.sum().item())
 
@@ -176,5 +181,23 @@ class SACAgent:
 
         self.alpha = self.log_alpha.exp()
 
-        if self.total_step % self.update_time == 0 :
+        if self.total_episode % self.update_time == 0 :
             self.target_soft_update()
+
+    def save_models(self):
+        print('------ save models ------')
+        # self.actor.save_models()
+        T.save(self.actor.state_dict(), self.checkpoint + '_actor')
+        # self.critic_eval.save_models()
+        T.save(self.critic_eval.state_dict(), self.checkpoint + '_critic')
+
+        T.save(self.alpha_optimizer.state_dict(), self.checkpoint + '_alpha_optimizer')
+
+    def load_models(self):
+        print('------ load models ------')
+        self.alpha_optimizer.load_state_dict(T.load(self.checkpoint + '_alpha_optimizer'))
+
+        self.actor.load_state_dict(T.load(self.checkpoint + '_actor'))
+
+        self.critic_eval.load_state_dict(T.load(self.checkpoint + '_critic'))
+        self.critic_target = copy.deepcopy(self.critic_eval)

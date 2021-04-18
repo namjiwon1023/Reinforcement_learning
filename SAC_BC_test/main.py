@@ -41,7 +41,7 @@ if __name__ == '__main__':
         print('------ No parameters available! ------')
 
     n_games = int(1e6)
-    figure_file = '/home/nam/Reinforcement_learning/SAC_BC_test/BipedalWalker.png'
+    figure_file = '/home/nam/Reinforcement_learning/SAC_BC_test/Pendulum.png'
     best_score = agent.env.reward_range[0]
     scores = []
     transitions = []
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     n_steps = 0
 
     plt.ion()
-    plt.figure(figsize=(30, 5))
+    plt.figure(figsize=(15, 5))
 
 
     for i in range(1, n_games + 1):
