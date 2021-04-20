@@ -18,7 +18,7 @@ from utils import random_seed
 
 
 if __name__ == '__main__':
-    writer = SummaryWriter('./Result')
+    writer = SummaryWriter()
     random_seed(123)
     params = {
                 'GAMMA' : 0.99,
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     scores = []
     store_scores = []
     eval_rewards = []
-    n_steps = 0
+
 
     avg_score = 0
     n_updates = 0
@@ -84,7 +84,6 @@ if __name__ == '__main__':
                 agent.env.render()
             episode_steps += 1
             agent.total_step += 1
-            n_steps += 1
             action = agent.choose_action(state)
             next_state, reward, done, _ = agent.env.step(action)
             real_done = False if episode_steps >= agent.env.spec.max_episode_steps else done
@@ -96,16 +95,16 @@ if __name__ == '__main__':
             if done:
                 break
 
-        if n_steps % agent.gradient_steps == 0 and n_steps > agent.train_start_step:
+        if agent.total_step % agent.gradient_steps == 0 and agent.total_step > agent.train_start_step:
             Q1_loss, Q2_loss, Policy_loss, Alpha_loss = agent.learn()
             n_updates += 1
 
-        if n_steps % agent.eval_steps == 0 and n_steps > agent.train_start_step:
+        if agent.total_step % agent.eval_steps == 0 and agent.total_step > agent.train_start_step:
             writer.add_scalar('Loss/Q-Func1', Q1_loss, n_updates)
             writer.add_scalar('Loss/Q-Func2', Q2_loss, n_updates)
             writer.add_scalar('Loss/Policy', Policy_loss, n_updates)
             writer.add_scalar('Loss/Alpha', Alpha_loss, n_updates)
-            running_reward = np.mean(scores)
+            running_reward = np.mean(scores[-10:])
             eval_reward = agent.evaluate_agent(n_starts=10)
             writer.add_scalar('Reward/Train', running_reward, agent.total_step)
             writer.add_scalar('Reward/Test', eval_reward, agent.total_step)
@@ -113,7 +112,7 @@ if __name__ == '__main__':
             print('| Episode : {} | Score : {} | Predict Score : {} | Avg score : {} |'.format(i, score, eval_reward, avg_score))
             scores = []
 
-        if n_steps == max_steps:
+        if agent.total_step == max_steps:
             break
 
         scores.append(score)
@@ -124,6 +123,6 @@ if __name__ == '__main__':
             best_score = avg_score
             agent.save_models()
 
-        print('Episode : {} | Score : {} | Avg score : {} | Time_Step : {} | Learning Step : {} | update number : {} |'.format(i, score, avg_score, n_steps, agent.learning_steps, n_updates))
+        print('Episode : {} | Score : {} | Avg score : {} | Time_Step : {} | Learning Step : {} | update number : {} |'.format(i, score, avg_score, agent.total_step, agent.learning_steps, n_updates))
 
     agent.env.close()
