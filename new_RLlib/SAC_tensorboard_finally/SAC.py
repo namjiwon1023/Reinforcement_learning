@@ -31,17 +31,17 @@ class SACAgent:
         self.n_actions = self.env.action_space.shape[0]
         self.n_hiddens = int(2**8)
 
-        self.memory = ReplayBuffer(self.memory_size, self.n_states, self.n_actions, use_cuda=True)
+        self.memory = ReplayBuffer(self.memory_size, self.n_states, self.n_actions, self.device, use_cuda=True)
 
         self.target_entropy = -self.n_actions
         self.log_alpha = T.zeros(1, requires_grad=True, device=self.device)
         self.alpha = self.log_alpha.exp()
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=self.learning_rate)
 
-        self.actor = ActorNetwork(self.n_states, self.n_actions, self.n_hiddens, self.learning_rate, self.dirPath)
+        self.actor = ActorNetwork(self.n_states, self.n_actions, self.n_hiddens, self.learning_rate, self.device, self.dirPath)
         self.actor.apply(_layer_norm)
 
-        self.critic_eval = CriticNetwork(self.n_states, self.n_actions, self.n_hiddens, self.learning_rate, self.dirPath)
+        self.critic_eval = CriticNetwork(self.n_states, self.n_actions, self.n_hiddens, self.learning_rate, self.device, self.dirPath)
         self.critic_eval.apply(_layer_norm)
         self.critic_target = copy.deepcopy(self.critic_eval)
         self.critic_target.eval()

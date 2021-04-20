@@ -2,9 +2,9 @@ import numpy as np
 import torch as T
 
 class ReplayBuffer:
-    def __init__(self, memory_size, n_states, n_actions, use_cuda=False):
+    def __init__(self, memory_size, n_states, n_actions, device, use_cuda=False):
 
-        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+        self.device = device
         self.use_cuda = use_cuda
 
         if self.use_cuda:

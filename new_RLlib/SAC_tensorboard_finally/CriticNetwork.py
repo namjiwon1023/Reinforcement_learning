@@ -9,7 +9,7 @@ from torch.distributions import Normal
 import numpy as np
 
 class CriticNetwork(nn.Module):
-    def __init__(self, n_states, n_actions, n_hidden, alpha, dirPath):
+    def __init__(self, n_states, n_actions, n_hidden, alpha, device, dirPath):
         super(CriticNetwork, self).__init__()
         self.checkpoint = os.path.join(dirPath, 'sac_critic')
 
@@ -26,7 +26,7 @@ class CriticNetwork(nn.Module):
                                         nn.Linear(n_hidden, 1))
 
         self.optimizer = optim.Adam(self.parameters(), lr=alpha)
-        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+        self.device = device
         self.to(self.device)
 
     def forward(self, state, action):

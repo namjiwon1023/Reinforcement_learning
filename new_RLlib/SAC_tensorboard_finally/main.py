@@ -122,7 +122,7 @@ if __name__ == '__main__':
             best_score = avg_score
             agent.save_models()
 
-        if agent.total_step == max_steps:
+        if agent.total_step >= max_steps:
             break
 
         print('Episode : {} | Score : {} | Avg score : {} | Time_Step : {} | Learning Step : {} | update number : {} |'.format(i, score, avg_score, agent.total_step, agent.learning_steps, n_updates))
