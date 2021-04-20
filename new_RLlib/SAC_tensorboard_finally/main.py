@@ -78,26 +78,28 @@ if __name__ == '__main__':
         score = 0
         done = False
 
-        if agent.total_step % agent.gradient_steps == 0 and agent.total_step > agent.train_start_step:
-            Q1_loss, Q2_loss, Policy_loss, Alpha_loss = agent.learn()
-            n_updates += 1
-
-        if agent.total_step % agent.eval_steps == 0 and agent.total_step > agent.train_start_step:
-            running_reward = np.mean(scores)
-            eval_reward = agent.evaluate_agent(n_starts=10)
-            writer.add_scalar('Loss/Q-Func1', Q1_loss, n_updates)
-            writer.add_scalar('Loss/Q-Func2', Q2_loss, n_updates)
-            writer.add_scalar('Loss/Policy', Policy_loss, n_updates)
-            writer.add_scalar('Loss/Alpha', Alpha_loss, n_updates)
-            writer.add_scalar('Reward/Train', running_reward, agent.total_step)
-            writer.add_scalar('Reward/Test', eval_reward, agent.total_step)
-            eval_rewards.append(eval_reward)
-            scores = []
-            print('| Episode : {} | Score : {} | Predict Score : {} | Avg score : {} |'.format(i, score, eval_reward, avg_score))
-
         for _ in range(1, episode_max_step + 1):
+
             if agent.render is True:
                 agent.env.render()
+
+            if agent.total_step % agent.gradient_steps == 0 and agent.total_step > agent.train_start_step:
+                Q1_loss, Q2_loss, Policy_loss, Alpha_loss = agent.learn()
+                n_updates += 1
+
+            if agent.total_step % agent.eval_steps == 0 and agent.total_step > agent.train_start_step:
+                running_reward = np.mean(scores)
+                eval_reward = agent.evaluate_agent(n_starts=10)
+                writer.add_scalar('Loss/Q-Func1', Q1_loss, n_updates)
+                writer.add_scalar('Loss/Q-Func2', Q2_loss, n_updates)
+                writer.add_scalar('Loss/Policy', Policy_loss, n_updates)
+                writer.add_scalar('Loss/Alpha', Alpha_loss, n_updates)
+                writer.add_scalar('Reward/Train', running_reward, agent.total_step)
+                writer.add_scalar('Reward/Test', eval_reward, agent.total_step)
+                eval_rewards.append(eval_reward)
+                scores = []
+                print('| Episode : {} | Score : {} | Predict Score : {} | Avg score : {} |'.format(i, score, eval_reward, avg_score))
+
             cur_episode_steps += 1
             agent.total_step += 1
             action = agent.choose_action(state)
@@ -108,6 +110,7 @@ if __name__ == '__main__':
             agent.memory.store(*agent.transition)
             state = next_state
             score += reward
+
             if done:
                 break
 
