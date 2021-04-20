@@ -9,11 +9,10 @@ from torch.distributions import Normal
 import numpy as np
 
 class ActorNetwork(nn.Module):
-    def __init__(self, n_states, n_actions, n_hidden, alpha, device, dirPath, min_log_std = -20, max_log_std = 2):
+    def __init__(self, n_states, n_actions, n_hidden, alpha, device, min_log_std = -20, max_log_std = 2):
         super(ActorNetwork, self).__init__()
         self.min_log_std = min_log_std
         self.max_log_std = max_log_std
-        self.checkpoint = os.path.join(dirPath, 'sac_actor')
 
         self.feature = nn.Sequential(nn.Linear(n_states, n_hidden),
                                     nn.ReLU(),
@@ -53,11 +52,3 @@ class ActorNetwork(nn.Module):
             log_prob = None
 
         return action, log_prob
-
-    def save_models(self):
-        T.save(self.state_dict(), self.checkpoint)
-        T.save(self.optimizer.state_dict(), self.checkpoint + '_optimizer')
-
-    def load_models(self):
-        self.load_state_dict(T.load(self.checkpoint))
-        self.optimizer.load_state_dict(T.load(self.checkpoint + '_optimizer'))

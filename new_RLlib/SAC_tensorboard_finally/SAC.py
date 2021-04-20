@@ -21,8 +21,7 @@ class SACAgent:
             setattr(self, key, value)
 
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
-        self.dirPath= os.getcwd() + '/checkpoint'
-        self.alpha_checkpoint = os.path.join(self.dirPath, 'alpha_optimizer')
+        self.dirPath = os.getcwd() + '/sac_model.pth'
 
         self.env = gym.make('Walker2d-v2')
         self.env = RescaleAction(self.env, -1, 1)
@@ -38,10 +37,10 @@ class SACAgent:
         self.alpha = self.log_alpha.exp()
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=self.learning_rate)
 
-        self.actor = ActorNetwork(self.n_states, self.n_actions, self.n_hiddens, self.learning_rate, self.device, self.dirPath)
+        self.actor = ActorNetwork(self.n_states, self.n_actions, self.n_hiddens, self.learning_rate, self.device)
         self.actor.apply(_layer_norm)
 
-        self.critic_eval = CriticNetwork(self.n_states, self.n_actions, self.n_hiddens, self.learning_rate, self.device, self.dirPath)
+        self.critic_eval = CriticNetwork(self.n_states, self.n_actions, self.n_hiddens, self.learning_rate, self.device)
         self.critic_eval.apply(_layer_norm)
         self.critic_target = copy.deepcopy(self.critic_eval)
         self.critic_target.eval()
@@ -141,10 +140,15 @@ class SACAgent:
         print('------ Save models ! ----')
         print('-------------------------')
 
-        self.actor.save_models()
-        self.critic_eval.save_models()
-
-        T.save(self.alpha_optimizer.state_dict(), self.alpha_checkpoint)
+        T.save({'alpha_optimizer' : self.alpha_optimizer.state_dict(),
+                'actor' : self.actor.state_dict(),
+                'critic_eval' : self.critic_eval.state_dict(),
+                'critic_target' : self.critic_target.state_dict(),
+                'log_alpha' : self.log_alpha,
+                'alpha' : self.alpha,
+                'actor_optimizer' : self.actor.optimizer.state_dict(),
+                'critic_optimizer' : self.critic_eval.optimizer.state_dict()},
+                self.dirPath)
 
     def load_models(self):
 
@@ -152,12 +156,20 @@ class SACAgent:
         print('------ Load models ! ----')
         print('-------------------------')
 
-        self.alpha_optimizer.load_state_dict(T.load(self.alpha_checkpoint))
+        checkpoint = T.load(self.dirPath)
 
-        self.actor.load_models()
+        self.alpha_optimizer.load_state_dict(checkpoint['alpha_optimizer'])
+        self.actor.load_state_dict(checkpoint['actor'])
+        self.critic_eval.load_state_dict(checkpoint['critic_eval'])
+        self.critic_target.load_state_dict(checkpoint['critic_target'])
+        self.log_alpha = checkpoint['log_alpha']
+        self.alpha = checkpoint['alpha']
+        self.actor.optimizer.load_state_dict(checkpoint['actor_optimizer'])
+        self.critic_eval.optimizer.load_state_dict(checkpoint['critic_optimizer'])
 
-        self.critic_eval.load_models()
-        self.critic_target = copy.deepcopy(self.critic_eval)
+        self.critic_target.eval()
+        for p in self.critic_target.parameters():
+            p.requires_grad = False
 
     def evaluate_agent(self, n_starts=10):
         reward_sum = 0

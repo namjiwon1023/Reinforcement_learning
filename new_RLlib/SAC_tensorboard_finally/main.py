@@ -16,7 +16,6 @@ from CriticNetwork import CriticNetwork
 from SAC import SACAgent
 from utils import random_seed
 
-
 if __name__ == '__main__':
     writer = SummaryWriter()
     random_seed(123)
@@ -36,28 +35,17 @@ if __name__ == '__main__':
             }
 
     agent = SACAgent(**params)
-
-    if not os.path.exists("./checkpoint"):
-        os.makedirs("./checkpoint")
-
-    dirPath = os.getcwd() + '/checkpoint'
-    sac_actor_parameter = dirPath + '/sac_actor'
-    sac_actor_optimizer_parameter = dirPath + '/sac_actor_optimizer'
-    sac_critic_parameter = dirPath + '/sac_critic'
-    sac_critic_optimizer_parameter = dirPath + '/sac_critic_optimizer'
-    alpha_optimizer_parameter = dirPath + '/alpha_optimizer'
-
-    if os.path.exists(sac_actor_parameter) and os.path.exists(sac_actor_optimizer_parameter) \
-        and os.path.exists(sac_critic_parameter) and os.path.exists(sac_critic_optimizer_parameter) \
-        and os.path.exists(alpha_optimizer_parameter):
+    dirPath = os.getcwd() + '/sac_model.pth'
+    if os.path.isfile(dirPath):
         agent.load_models()
+
     else:
         print('|------------------------------------|')
         print('|----- No parameters available! -----|')
         print('|------------------------------------|')
 
+
     i_episode = int(1e6)
-    episode_max_step = int(1e4)
     max_steps = int(3e6)
 
     best_score = agent.env.reward_range[0]
@@ -69,36 +57,16 @@ if __name__ == '__main__':
     avg_score = 0
     n_updates = 0
 
-    plt.ion()
-    plt.figure(figsize=(20, 5))
-
     for i in range(1, i_episode + 1):
         state = agent.env.reset()
         cur_episode_steps = 0
         score = 0
         done = False
 
-        for _ in range(1, episode_max_step + 1):
+        while not done:
 
             if agent.render is True:
                 agent.env.render()
-
-            if agent.total_step % agent.gradient_steps == 0 and agent.total_step > agent.train_start_step:
-                Q1_loss, Q2_loss, Policy_loss, Alpha_loss = agent.learn()
-                n_updates += 1
-
-            if agent.total_step % agent.eval_steps == 0 and agent.total_step > agent.train_start_step:
-                running_reward = np.mean(scores)
-                eval_reward = agent.evaluate_agent(n_starts=10)
-                writer.add_scalar('Loss/Q-Func1', Q1_loss, n_updates)
-                writer.add_scalar('Loss/Q-Func2', Q2_loss, n_updates)
-                writer.add_scalar('Loss/Policy', Policy_loss, n_updates)
-                writer.add_scalar('Loss/Alpha', Alpha_loss, n_updates)
-                writer.add_scalar('Reward/Train', running_reward, agent.total_step)
-                writer.add_scalar('Reward/Test', eval_reward, agent.total_step)
-                eval_rewards.append(eval_reward)
-                scores = []
-                print('| Episode : {} | Score : {} | Predict Score : {} | Avg score : {} |'.format(i, score, eval_reward, avg_score))
 
             cur_episode_steps += 1
             agent.total_step += 1
@@ -111,8 +79,22 @@ if __name__ == '__main__':
             state = next_state
             score += reward
 
-            if done:
-                break
+            if agent.total_step % agent.gradient_steps == 0 and agent.total_step > agent.train_start_step:
+                Q1_loss, Q2_loss, Policy_loss, Alpha_loss = agent.learn()
+                n_updates += 1
+
+            if agent.total_step % agent.eval_steps == 0 and agent.total_step > agent.train_start_step:
+                running_reward = np.mean(scores)
+                eval_reward = agent.evaluate_agent(n_starts=10)
+                eval_rewards.append(eval_reward)
+                writer.add_scalar('Loss/Q-Func1', Q1_loss, n_updates)
+                writer.add_scalar('Loss/Q-Func2', Q2_loss, n_updates)
+                writer.add_scalar('Loss/Policy', Policy_loss, n_updates)
+                writer.add_scalar('Loss/Alpha', Alpha_loss, n_updates)
+                writer.add_scalar('Reward/Train', running_reward, agent.total_step)
+                writer.add_scalar('Reward/Test', eval_reward, agent.total_step)
+                print('| Episode : {} | Score : {} | Predict Score : {} | Avg score : {} |'.format(i, score, eval_reward, avg_score))
+                scores = []
 
         scores.append(score)
         store_scores.append(score)
@@ -126,6 +108,7 @@ if __name__ == '__main__':
             agent.save_models()
 
         if agent.total_step >= max_steps:
+            print('Reach the maximum number of training steps ！')
             break
 
         print('Episode : {} | Score : {} | Avg score : {} | Time_Step : {} | Learning Step : {} | update number : {} |'.format(i, score, avg_score, agent.total_step, agent.learning_steps, n_updates))

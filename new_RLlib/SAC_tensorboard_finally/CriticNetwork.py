@@ -9,9 +9,8 @@ from torch.distributions import Normal
 import numpy as np
 
 class CriticNetwork(nn.Module):
-    def __init__(self, n_states, n_actions, n_hidden, alpha, device, dirPath):
+    def __init__(self, n_states, n_actions, n_hidden, alpha, device):
         super(CriticNetwork, self).__init__()
-        self.checkpoint = os.path.join(dirPath, 'sac_critic')
 
         self.criticQ_1 = nn.Sequential(nn.Linear(n_states + n_actions, n_hidden),
                                         nn.ReLU(),
@@ -36,11 +35,3 @@ class CriticNetwork(nn.Module):
         Q2 = self.criticQ_2(x)
 
         return Q1, Q2
-
-    def save_models(self):
-        T.save(self.state_dict(), self.checkpoint)
-        T.save(self.optimizer.state_dict(), self.checkpoint + '_optimizer')
-
-    def load_models(self):
-        self.load_state_dict(T.load(self.checkpoint))
-        self.optimizer.load_state_dict(T.load(self.checkpoint + '_optimizer'))
