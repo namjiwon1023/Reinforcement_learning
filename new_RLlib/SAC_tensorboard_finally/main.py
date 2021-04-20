@@ -93,7 +93,7 @@ if __name__ == '__main__':
                 writer.add_scalar('Loss/Alpha', Alpha_loss, n_updates)
                 writer.add_scalar('Reward/Train', running_reward, agent.total_step)
                 writer.add_scalar('Reward/Test', eval_reward, agent.total_step)
-                print('| Episode : {} | Score : {} | Predict Score : {} | Avg score : {} |'.format(i, score, eval_reward, avg_score))
+                print('| Episode : {} | Score : {} | Predict Score : {} | Avg score : {} |'.format(i, round(score, 2), round(eval_reward, 2), round(avg_score, 2)))
                 scores = []
 
         scores.append(score)
@@ -111,6 +111,6 @@ if __name__ == '__main__':
             print('Reach the maximum number of training steps ！')
             break
 
-        print('Episode : {} | Score : {} | Avg score : {} | Time_Step : {} | Learning Step : {} | update number : {} |'.format(i, score, avg_score, agent.total_step, agent.learning_steps, n_updates))
+        print('Episode : {} | Score : {} | Avg score : {} | Time_Step : {} | Learning Step : {} | update number : {} |'.format(i, round(score, 2), round(avg_score, 2), agent.total_step, agent.learning_steps, n_updates))
 
     agent.env.close()
