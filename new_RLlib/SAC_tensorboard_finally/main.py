@@ -84,7 +84,7 @@ if __name__ == '__main__':
                 n_updates += 1
 
             if agent.total_step % agent.eval_steps == 0 and agent.total_step > agent.train_start_step:
-                running_reward = np.mean(scores)
+                running_reward = np.mean(scores[-10:])
                 eval_reward = agent.evaluate_agent(n_starts=10)
                 eval_rewards.append(eval_reward)
                 writer.add_scalar('Loss/Q-Func1', Q1_loss, n_updates)
@@ -98,7 +98,7 @@ if __name__ == '__main__':
 
         scores.append(score)
         store_scores.append(score)
-        avg_score = np.mean(scores[-10:])
+        avg_score = np.mean(store_scores[-10:])
 
         np.savetxt("./Episode_return.txt", store_scores, delimiter=",")
         np.savetxt("./Step_return.txt", eval_rewards, delimiter=",")
