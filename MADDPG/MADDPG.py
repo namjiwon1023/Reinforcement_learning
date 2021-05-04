@@ -66,7 +66,7 @@ class MADDPG:
                 t_p.data.copy_(self.args.tau * l_p.data + (1 - self.args.tau) * t_p.data)
 
     # update the Actor-Critic Networks
-    def learn(self, transitions, other_agents):
+    def train(self, transitions, other_agents):
         for key in transitions.keys():
             transitions[key] = T.as_tensor(transitions[key], dtype=T.float32, device=self.device)
         r = transitions['r_%d' % self.agent_id] # You only need your own reward during training
