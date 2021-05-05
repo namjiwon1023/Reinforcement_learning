@@ -1,8 +1,13 @@
 # -*- coding:utf8 -*-
 import argparse
+import torch as T
+
+device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
 
 def get_args():
     parser = argparse.ArgumentParser("Reinforcement Learning experiments for multiagent environments")
+    # GPU
+    parser.add_argument("--device", default=device, help="Using GPU or CPU")
     # Environment
     parser.add_argument("--scenario-name", type=str, default="simple_tag", help="name of the scenario script")
     parser.add_argument("--max-episode-len", type=int, default=100, help="maximum episode length")

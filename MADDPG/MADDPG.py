@@ -13,11 +13,10 @@ class MADDPG:
         self.args = args
         self.agent_id = agent_id
         self.train_step = 0
-        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
 
         # Create the Actor-Critic Network
-        self.actor_network = Actor(args, agent_id).to(self.device)
-        self.critic_network = Critic(args).to(self.device)
+        self.actor_network = Actor(args, agent_id)
+        self.critic_network = Critic(args)
 
         # build up the actor target network
         self.actor_target_network = copy.deepcopy(self.actor_network)
@@ -32,10 +31,6 @@ class MADDPG:
         self.critic_target_network.eval()
         for q in self.critic_target_network.parameters():
             q.requires_grad = False
-
-        # create the optimizer
-        self.actor_optimizer = optim.Adam(self.actor_network.parameters(), lr=self.args.lr_actor)
-        self.critic_optimizer = optim.Adam(self.critic_network.parameters(), lr=self.args.lr_critic)
 
         # create the dict for store the model
         if not os.path.exists(self.args.save_dir):
@@ -68,7 +63,7 @@ class MADDPG:
     # update the Actor-Critic Networks
     def train(self, transitions, other_agents):
         for key in transitions.keys():
-            transitions[key] = T.as_tensor(transitions[key], dtype=T.float32, device=self.device)
+            transitions[key] = T.as_tensor(transitions[key], dtype=T.float32, device=self.args.device)
         r = transitions['r_%d' % self.agent_id] # You only need your own reward during training
         o, u, o_next = [], [], [] # Used to store the various items in each agent's experience
         for agent_id in range(self.args.n_agents):
@@ -101,13 +96,13 @@ class MADDPG:
         u[self.agent_id] = self.actor_network(o[self.agent_id])
         actor_loss = -self.critic_network(o, u).mean()
 
-        self.actor_optimizer.zero_grad()
+        self.actor_network.optimizer.zero_grad()
         actor_loss.backward()
-        self.actor_optimizer.step()
+        self.actor_network.optimizer.step()
 
-        self.critic_optimizer.zero_grad()
+        self.critic_network.optimizer.zero_grad()
         critic_loss.backward()
-        self.critic_optimizer.step()
+        self.critic_network.optimizer.step()
 
         self._soft_update_target_network()
         if self.train_step > 0 and self.train_step % self.args.save_rate == 0:
