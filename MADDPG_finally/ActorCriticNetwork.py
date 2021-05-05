@@ -20,7 +20,7 @@ class Actor(nn.Module):
                                 nn.Linear(args.n_hiddens, args.action_shape[agent_id])
                                 )
 
-        self.optimizer = optim.Adam(self.parameters(), lr=args.lr_actor)
+        self.optimizer = optim.Adam(self.parameters(), lr=args.actor_lr)
         self.to(args.device)
 
     def forward(self, x):
@@ -44,7 +44,7 @@ class Critic(nn.Module):
                                 nn.Linear(args.n_hiddens, 1)
                                 )
 
-        self.optimizer = optim.Adam(self.parameters(), lr=args.lr_critic)
+        self.optimizer = optim.Adam(self.parameters(), lr=args.critic_lr)
         self.to(args.device)
 
     def forward(self, state, action):
