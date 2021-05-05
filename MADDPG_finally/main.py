@@ -25,7 +25,7 @@ class Agent:
         else:
             with T.no_grad():
                 inputs = T.as_tensor(o, dtype=T.float32, device=self.args.device).unsqueeze(0) # Improve the dimensionality of state
-                pi = self.policy.actor_network(inputs).squeeze(0) # Reduce the dimensionality of the action
+                pi = self.policy.actor(inputs).squeeze(0) # Reduce the dimensionality of the action
                 u = pi.detach().cpu().numpy()
 
                 noise = noise_rate * self.args.high_action * np.random.randn(*u.shape) # gaussian noise
