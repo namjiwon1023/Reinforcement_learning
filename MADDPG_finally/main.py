@@ -64,10 +64,10 @@ class Runner:
     def run(self):
         returns = []
         for time_step in tqdm(range(self.args.time_steps)):
+            self.env.render()
             # reset the environment
             if time_step % self.episode_limit == 0:
                 s = self.env.reset()
-                self.env.render()
 
             u = []
             actions = []
