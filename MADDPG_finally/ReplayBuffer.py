@@ -12,23 +12,25 @@ class Buffer:
         self.buffer = dict()
         '''The information collected by each agent must be stored'''
         for i in range(self.args.n_agents):
-            self.buffer['o_%d' % i] = np.empty([self.size, self.args.obs_shape[i]])
-            self.buffer['u_%d' % i] = np.empty([self.size, self.args.action_shape[i]])
-            self.buffer['r_%d' % i] = np.empty([self.size])
-            self.buffer['o_next_%d' % i] = np.empty([self.size, self.args.obs_shape[i]])
+            self.buffer['o_%d' % i] = T.empty([self.size, self.args.obs_shape[i]],  dtype=T.float32, device=self.args.device)
+            self.buffer['u_%d' % i] = T.empty([self.size, self.args.action_shape[i]],  dtype=T.float32, device=self.args.device)
+            self.buffer['r_%d' % i] = T.empty([self.size],  dtype=T.float32, device=self.args.device)
+            self.buffer['o_next_%d' % i] = T.empty([self.size, self.args.obs_shape[i]],  dtype=T.float32, device=self.args.device)
+            self.buffer['done_%d' % i] = T.empty([self.size],  dtype=T.float32, device=self.args.device)
         # thread lock
         self.lock = threading.Lock()
 
     # store the episode
-    def store_episode(self, o, u, r, o_next):
+    def store_episode(self, o, u, r, o_next, done):
         idxs = self._get_storage_idx(inc=1) # Stored in the form of transition, only one experience at a time
         '''The information collected by each agent must be stored'''
         for i in range(self.args.n_agents):
             with self.lock:
-                self.buffer['o_%d' % i][idxs] = o[i]
-                self.buffer['u_%d' % i][idxs] = u[i]
-                self.buffer['r_%d' % i][idxs] = r[i]
-                self.buffer['o_next_%d' % i][idxs] = o_next[i]
+                self.buffer['o_%d' % i][idxs] = T.as_tensor(o[i], dtype=T.float32, device=self.args.device)
+                self.buffer['u_%d' % i][idxs] = T.as_tensor(u[i], dtype=T.float32, device=self.args.device)
+                self.buffer['r_%d' % i][idxs] = T.as_tensor(r[i], dtype=T.float32, device=self.args.device)
+                self.buffer['o_next_%d' % i][idxs] = T.as_tensor(o_next[i], dtype=T.float32, device=self.args.device)
+                self.buffer['done_%d' % i][idxs] = T.as_tensor(done[i], dtype=T.float32, device=self.args.device)
 
     # sample the data from the replay buffer
     def sample(self, batch_size):

@@ -18,24 +18,24 @@ class MADDPG:
 
         # Create the Actor-Critic Network
         self.actor = Actor(args, agent_id)
-        self.actor.apply(_layer_norm)
+        # self.actor.apply(_layer_norm)
 
         self.critic = Critic(args)
-        self.critic.apply(_layer_norm)
+        # self.critic.apply(_layer_norm)
 
         # build up the actor target network
         self.actor_target = copy.deepcopy(self.actor)
         self.actor_target.load_state_dict(self.actor.state_dict())
-        self.actor_target.eval()
-        for p in self.actor_target.parameters():
-            p.requires_grad = False
+        # self.actor_target.eval()
+        # for p in self.actor_target.parameters():
+        #     p.requires_grad = False
 
         # build up the critic target network
         self.critic_target = copy.deepcopy(self.critic)
         self.critic_target.load_state_dict(self.critic.state_dict())
-        self.critic_target.eval()
-        for q in self.critic_target.parameters():
-            q.requires_grad = False
+        # self.critic_target.eval()
+        # for q in self.critic_target.parameters():
+        #     q.requires_grad = False
 
         # create the dict for store the model
         if not os.path.exists(self.args.save_dir):
@@ -68,9 +68,10 @@ class MADDPG:
     # update the Actor-Critic Networks
     def train(self, transitions, other_agents):
         for key in transitions.keys():
-            transitions[key] = T.as_tensor(transitions[key], dtype=T.float32, device=self.args.device)
+            transitions[key] = T.tensor(transitions[key], dtype=T.float32, device=self.args.device)
 
         r = transitions['r_%d' % self.agent_id] # You only need your own reward during training
+        done = transitions['done_%d' % self.agent_id]
 
         o, u, o_next = [], [], [] # Used to store the various items in each agent's experience
 
@@ -94,7 +95,7 @@ class MADDPG:
                     index += 1
 
             q_next = self.critic_target(o_next, u_next).detach()
-            target_q = (r.unsqueeze(1) + self.args.gamma * q_next).detach()
+            target_q = (r.unsqueeze(1) + self.args.gamma * q_next * (1-done)).detach()
 
 
         q_value = self.critic(o, u)

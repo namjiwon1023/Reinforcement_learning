@@ -4,7 +4,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-
 class Actor(nn.Module):
     def __init__(self, args, agent_id):
         super(Actor, self).__init__()
@@ -19,7 +18,6 @@ class Actor(nn.Module):
                                 nn.ReLU(),
                                 nn.Linear(args.n_hiddens, args.action_shape[agent_id])
                                 )
-
         self.optimizer = optim.Adam(self.parameters(), lr=args.actor_lr)
         self.to(args.device)
 
@@ -43,7 +41,6 @@ class Critic(nn.Module):
                                 nn.ReLU(),
                                 nn.Linear(args.n_hiddens, 1)
                                 )
-
         self.optimizer = optim.Adam(self.parameters(), lr=args.critic_lr)
         self.to(args.device)
 
