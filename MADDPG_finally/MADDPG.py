@@ -18,24 +18,22 @@ class MADDPG:
 
         # Create the Actor-Critic Network
         self.actor = Actor(args, agent_id)
-        # self.actor.apply(_layer_norm)
+        self.actor.apply(_layer_norm)
 
         self.critic = Critic(args)
-        # self.critic.apply(_layer_norm)
+        self.critic.apply(_layer_norm)
 
         # build up the actor target network
         self.actor_target = copy.deepcopy(self.actor)
-        self.actor_target.load_state_dict(self.actor.state_dict())
-        # self.actor_target.eval()
-        # for p in self.actor_target.parameters():
-        #     p.requires_grad = False
+        self.actor_target.eval()
+        for p in self.actor_target.parameters():
+            p.requires_grad = False
 
         # build up the critic target network
         self.critic_target = copy.deepcopy(self.critic)
-        self.critic_target.load_state_dict(self.critic.state_dict())
-        # self.critic_target.eval()
-        # for q in self.critic_target.parameters():
-        #     q.requires_grad = False
+        self.critic_target.eval()
+        for q in self.critic_target.parameters():
+            q.requires_grad = False
 
         # create the dict for store the model
         if not os.path.exists(self.args.save_dir):

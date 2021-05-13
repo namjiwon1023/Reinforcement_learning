@@ -14,8 +14,6 @@ class Actor(nn.Module):
                                 nn.ReLU(),
                                 nn.Linear(args.n_hiddens, args.n_hiddens),
                                 nn.ReLU(),
-                                nn.Linear(args.n_hiddens, args.n_hiddens),
-                                nn.ReLU(),
                                 nn.Linear(args.n_hiddens, args.action_shape[agent_id])
                                 )
         self.optimizer = optim.Adam(self.parameters(), lr=args.actor_lr)
@@ -34,8 +32,6 @@ class Critic(nn.Module):
         '''MADDPG CriticNetwork Evaluate the state and actions of all agents'''
         self.critic = nn.Sequential(
                                 nn.Linear(sum(args.obs_shape) + sum(args.action_shape), args.n_hiddens),
-                                nn.ReLU(),
-                                nn.Linear(args.n_hiddens, args.n_hiddens),
                                 nn.ReLU(),
                                 nn.Linear(args.n_hiddens, args.n_hiddens),
                                 nn.ReLU(),

@@ -11,7 +11,7 @@ def get_args():
     parser.add_argument("--device", default=device, help="Using GPU or CPU")
 
     # Network neuron settings
-    parser.add_argument("--n-hiddens", type=int, default=64, help="hidden layers neuron")
+    parser.add_argument("--n-hiddens", type=int, default=128, help="hidden layers neuron")
 
     # Environment
     parser.add_argument("--scenario-name", type=str, default="simple_tag", help="Multi Agent Environment Name")
@@ -24,8 +24,8 @@ def get_args():
 
     # Core training parameters
     # Actor-Critic learning Rate
-    parser.add_argument("--actor-lr", type=float, default=1e-4, help="learning rate of actor")
-    parser.add_argument("--critic-lr", type=float, default=1e-3, help="learning rate of critic")
+    parser.add_argument("--actor-lr", type=float, default=1e-2, help="learning rate of actor")
+    parser.add_argument("--critic-lr", type=float, default=1e-2, help="learning rate of critic")
 
     parser.add_argument("--epsilon", type=float, default=0.1, help="epsilon greedy")
     parser.add_argument("--gamma", type=float, default=0.95, help="discount factor")
@@ -35,8 +35,8 @@ def get_args():
     parser.add_argument("--tau", type=float, default=0.01, help="parameter for updating the target network")
 
     # Memory Setting
-    parser.add_argument("--buffer-size", type=int, default=int(5e5), help="number of transitions can be stored in buffer")
-    parser.add_argument("--batch-size", type=int, default=256, help="number of episodes to optimize at the same time")
+    parser.add_argument("--buffer-size", type=int, default=int(1e6), help="number of transitions can be stored in buffer")
+    parser.add_argument("--batch-size", type=int, default=1024, help="number of episodes to optimize at the same time")
 
     # Checkpointing
     parser.add_argument("--save-dir", type=str, default="./model", help="directory in which training state and model should be saved")

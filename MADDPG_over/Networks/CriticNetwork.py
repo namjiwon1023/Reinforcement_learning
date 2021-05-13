@@ -1,5 +1,6 @@
 import torch as T
 import torch.nn as nn
+import torch.optim as optim
 
 class Critic(nn.Module):
     def __init__(self, sum_obs, sum_act, args):
@@ -11,6 +12,7 @@ class Critic(nn.Module):
                                 nn.ReLU(),
                                 nn.Linear(args.hidden_size, 1)
                                 )
+        self.optimizer = optim.Adam(self.parameters(), lr=args.critic_lr)
         self.to(args.device)
 
     def forward(self, state, action):

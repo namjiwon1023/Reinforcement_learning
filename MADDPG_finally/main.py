@@ -133,7 +133,7 @@ class Runner:
 
 if __name__ == '__main__':
     # random seed set
-    # _random_seed(123)
+    _random_seed(3)
     # get the params
     args = get_args()
     env, args = make_env(args)

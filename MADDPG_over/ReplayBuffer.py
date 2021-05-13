@@ -3,27 +3,27 @@ import numpy as np
 import torch as T
 
 def ReplayBuffer:
-    def __init__(self, memory_size, n_states, n_actions, use_cuda=False, device):
-        self.device = device
-        self.use_cuda = use_cuda
+    def __init__(self, n_states, n_actions, args):
+        self.device = args.device
+        self.use_cuda = args.use_cuda
         self.ptr, self.cur_len = 0, 0
-        self.max_size = memory_size
+        self.max_size = args.memory_size
         self.count = 0
         self.n_states = n_states
         self.n_actions = n_actions
 
         if self.use_cuda:
-            self.states = T.empty([memory_size, n_states], dtype=T.float32, device=self.device)
-            self.next_states = T.empty([memory_size, n_states], dtype=T.float32, device=self.device)
-            self.actions = T.empty([memory_size, n_actions], dtype=T.float32, device=self.device)
-            self.rewards = T.empty([memory_size], dtype=T.float32, device=self.device)
-            self.masks = T.empty([memory_size], dtype=T.float32, device=self.device)
+            self.states = T.empty([args.memory_size, n_states], dtype=T.float32, device=self.device)
+            self.next_states = T.empty([args.memory_size, n_states], dtype=T.float32, device=self.device)
+            self.actions = T.empty([args.memory_size, n_actions], dtype=T.float32, device=self.device)
+            self.rewards = T.empty([args.memory_size], dtype=T.float32, device=self.device)
+            self.masks = T.empty([args.memory_size], dtype=T.float32, device=self.device)
         else:
-            self.states = np.empty([memory_size, n_states], dtype=np.float32)
-            self.next_states = np.empty([memory_size, n_states], dtype=np.float32
-            self.actions = np.empty([memory_size, n_actions], dtype=np.float32)
-            self.rewards = np.empty([memory_size], dtype=np.float32)
-            self.masks = np.empty([memory_size], dtype=np.float32)
+            self.states = np.empty([args.memory_size, n_states], dtype=np.float32)
+            self.next_states = np.empty([args.memory_size, n_states], dtype=np.float32
+            self.actions = np.empty([args.memory_size, n_actions], dtype=np.float32)
+            self.rewards = np.empty([args.memory_size], dtype=np.float32)
+            self.masks = np.empty([args.memory_size], dtype=np.float32)
 
     def store(self, state, action, reward, next_state, mask):
         if self.use_cuda:
